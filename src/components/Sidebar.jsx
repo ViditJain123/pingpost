@@ -11,9 +11,7 @@ export default function Sidebar() {
   const [hoveredIcon, setHoveredIcon] = useState(null);
 
   useEffect(() => {
-    // Extract the last part of the pathname to determine which icon is selected
     const path = pathname.split('/').pop();
-    // Find the matching icon or default to home
     const matchingIcon = icons.find(icon => icon.href.includes(`/${path}`));
     if (matchingIcon) {
       setSelected(matchingIcon.id);

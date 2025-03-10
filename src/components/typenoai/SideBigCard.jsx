@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import useImageUpload from '../../hooks/useImageUpload';
 import useAudioRecording from '../../hooks/useAudioRecording';
 import useModifications from '../../hooks/useModifications';
+import useDraftPost from '../../hooks/useDraftPost';
 import PreviewModal from './PreviewModal';
 
 const SideBigCard = ({ postContent }) => {
@@ -11,9 +12,11 @@ const SideBigCard = ({ postContent }) => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [aiModificationText, setAiModificationText] = useState('');
   const [title, setTitle] = useState('');
+  const [saveStatus, setSaveStatus] = useState(null);
   
   // Custom hooks
-  const { uploadedImages, handleImageUpload, removeImage, maxImagesReached } = useImageUpload(4);
+  const { uploadedImages, handleImageUpload, removeImage, maxImagesReached, imageFiles } = useImageUpload(4);
+  const { saveDraft, isSaving, saveSuccess, saveError } = useDraftPost();
   
   const handleTranscriptionComplete = (text) => {
     setAiModificationText(prevText => {
@@ -31,7 +34,6 @@ const SideBigCard = ({ postContent }) => {
     recordingDuration, 
     showMaxDurationAlert, 
     toggleRecording,
-    setShowMaxDurationAlert
   } = useAudioRecording(handleTranscriptionComplete);
   
   const { 
@@ -39,6 +41,39 @@ const SideBigCard = ({ postContent }) => {
     showExtraCreditsMessage, 
     handleModifyClick 
   } = useModifications(4);
+
+  const handleSaveDraft = async () => {
+    setSaveStatus('saving');
+    
+    try {
+      // Create FormData to match backend expectations
+      const formData = new FormData();
+      formData.append('title', title || 'Untitled');
+      formData.append('postContent', postContent || '');
+      
+      // Append each image file separately
+      if (imageFiles && imageFiles.length > 0) {
+        imageFiles.forEach(file => {
+          formData.append('images', file);
+        });
+      }
+
+      const savedPost = await saveDraft(formData);
+      
+      if (savedPost) {
+        setSaveStatus('success');
+        // Optional: Reset form or show success message
+        setTimeout(() => {
+          setSaveStatus(null);
+        }, 3000);
+      } else {
+        setSaveStatus('error');
+      }
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      setSaveStatus('error');
+    }
+  };
 
   const ImageUploadButton = () => (
     <label className="aspect-square flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-all duration-200">
@@ -189,15 +224,34 @@ const SideBigCard = ({ postContent }) => {
           </div>
         </div>
 
+        {/* Save Status Message */}
+        {saveStatus && (
+          <div className={`p-3 rounded-lg text-sm ${
+            saveStatus === 'saving' ? 'bg-blue-50 text-blue-700' : 
+            saveStatus === 'success' ? 'bg-green-50 text-green-700' : 
+            'bg-red-50 text-red-700'
+          }`}>
+            {saveStatus === 'saving' && 'Saving your draft...'}
+            {saveStatus === 'success' && 'Draft saved successfully!'}
+            {saveStatus === 'error' && 'Error saving draft. Please try again.'}
+          </div>
+        )}
+
         <div className="pt-3 space-y-4">
           <div className="flex gap-3">
             <div className="relative w-1/2">
               <button 
-                className="w-full p-3 bg-white text-[#2563EB] rounded-lg border-2 border-dashed border-[#2563EB] hover:bg-blue-50 transition-all duration-300 ease-in-out font-medium active:transform active:scale-95 active:bg-blue-100 focus:outline-none"
+                className={`w-full p-3 rounded-lg border-2 border-dashed font-medium transition-all duration-300 ease-in-out focus:outline-none ${
+                  isSaving
+                    ? 'bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed'
+                    : 'bg-white text-[#2563EB] border-[#2563EB] hover:bg-blue-50 active:transform active:scale-95 active:bg-blue-100'
+                }`}
                 onMouseEnter={() => setShowDraftTooltip(true)}
                 onMouseLeave={() => setShowDraftTooltip(false)}
+                onClick={handleSaveDraft}
+                disabled={isSaving}
               >
-                Save as Draft
+                {isSaving ? 'Saving...' : 'Save as Draft'}
               </button>
               {showDraftTooltip && (
                 <div className="absolute left-0 bottom-full mb-2 w-64 bg-gray-800 text-white text-sm rounded-lg p-3 shadow-lg z-10 animate-fadeIn">

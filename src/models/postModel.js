@@ -22,6 +22,17 @@ const postSchema = new mongoose.Schema({
         enum: ["draft", "published", "scheduled"],
         required: true,
         default: "draft"
+    },
+    timeCreated: {
+        type: Date,
+        default: Date.now
+    },
+    timeUpdated: {
+        type: Date,
+        default: Date.now
+    },
+    timePublished: {
+        type: Date
     }
 });
 
