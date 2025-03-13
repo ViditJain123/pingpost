@@ -23,7 +23,7 @@ export async function GET(request) {
         
         const user = await userModel.findOne({ linkedinId });
         
-        if (!user) {
+        if (!user.linkedinSpecs) {
             return NextResponse.json({
                 status: 404,
                 body: {

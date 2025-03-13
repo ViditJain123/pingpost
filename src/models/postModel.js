@@ -17,6 +17,10 @@ const postSchema = new mongoose.Schema({
         type: [String],
         required: false
     },
+    imageUrls: {
+        type: [String],
+        required: false
+    },
     postStatus: {
         type: String,
         enum: ["draft", "published", "scheduled"],

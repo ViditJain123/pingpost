@@ -25,6 +25,7 @@ export async function POST(request) {
 
         const title = postData.get('title');
         const postContent = postData.get('postContent');
+        const imageUrls = postData.getAll('imageUrls');
         const files = postData.getAll('images');
 
         if (!title || !postContent) {
@@ -44,35 +45,58 @@ export async function POST(request) {
         else if (files.length > 0) {
             try {
                 const uploadPromises = files.map(async (file) => {
-                    const bytes = await file.arrayBuffer();
-                    const buffer = Buffer.from(bytes);
+                    // Skip if file is not an actual file (e.g., it's a string or other non-file data)
+                    if (!(file instanceof File) || !file.type.startsWith('image/')) {
+                        console.log('Skipping non-image file:', file.name || 'unknown');
+                        return null;
+                    }
+                    
+                    // Only proceed with valid image files
+                    try {
+                        const bytes = await file.arrayBuffer();
+                        const buffer = Buffer.from(bytes);
 
-                    return new Promise((resolve, reject) => {
-                        cloudinary.uploader
-                            .upload_stream(
-                                { folder: 'user-post-images' },
-                                (error, result) => {
-                                    if (error) return reject(error);
-                                    resolve(result.secure_url);
-                                }
-                            )
-                            .end(buffer);
-                    });
+                        return new Promise((resolve, reject) => {
+                            cloudinary.uploader
+                                .upload_stream(
+                                    { 
+                                        folder: 'user-post-images',
+                                        resource_type: 'image' 
+                                    },
+                                    (error, result) => {
+                                        if (error) {
+                                            console.error('Cloudinary upload error for file:', file.name, error);
+                                            return reject(error);
+                                        }
+                                        resolve(result.secure_url);
+                                    }
+                                )
+                                .end(buffer);
+                        });
+                    } catch (fileError) {
+                        console.error('Error processing file:', file.name, fileError);
+                        return null;
+                    }
                 });
 
-                uploadedImages = await Promise.all(uploadPromises);
+                // Filter out null results from failed uploads
+                const uploadResults = await Promise.all(uploadPromises);
+                uploadedImages = uploadResults.filter(url => url !== null);
             } catch (cloudinaryError) {
                 console.error('Cloudinary upload error:', cloudinaryError);
                 // Continue with post creation even if image upload fails
             }
         }
 
+        // Combine uploaded image URLs with provided image URLs
+        const allImageUrls = [...uploadedImages, ...imageUrls].filter(Boolean);
+
         const post = new Post({
             linkedinId,
             title,
             postContent,
-            images: uploadedImages,
-            postStatus: 'draft', // Adding the status field back
+            images: allImageUrls, // Store all images in a single array
+            postStatus: 'draft',
         });
 
         await post.save();

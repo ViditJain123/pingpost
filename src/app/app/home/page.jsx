@@ -16,53 +16,53 @@ export default function HomePage() {
   const cardData = [
     {
       id: '1',
-      title: "Project Planning",
-      description: "Create and organize project timelines, set milestones, and track deliverables effectively"
+      title: "Quantum Computing Updates",
+      description: "Breaking down recent quantum computing breakthroughs and their potential impact on cryptography and optimization problems"
     },
     {
       id: '2',
-      title: "Team Updates",
-      description: "Share daily progress updates with team members and stakeholders to maintain transparency"
+      title: "Edge AI Implementation",
+      description: "How edge computing is revolutionizing AI deployment with real-time processing and reduced latency in IoT devices"
     },
     {
       id: '3',
-      title: "Meeting Notes",
-      description: "Keep track of important discussions, action items, and decisions made during team meetings"
+      title: "Web3 Development Insights",
+      description: "Exploring decentralized applications, blockchain protocols, and the future of trustless infrastructure"
     },
     {
       id: '4',
-      title: "Task Management",
-      description: "Organize, prioritize, and track tasks across different projects and team members efficiently"
+      title: "RISC-V Architecture Adoption",
+      description: "The rise of open-source hardware architecture and how it's challenging traditional processor ecosystems"
     },
     {
       id: '5',
-      title: "Resource Allocation",
-      description: "Manage and track team resources, equipment, and budget allocation for optimal utilization"
+      title: "Neuromorphic Computing",
+      description: "Brain-inspired computing systems that promise to revolutionize machine learning and artificial intelligence"
     },
     {
       id: '6',
-      title: "Client Communication",
-      description: "Track client interactions, feedback, and maintain a log of all important correspondence"
+      title: "Digital Twin Technology",
+      description: "Virtual replicas of physical systems that enable real-time monitoring, predictive maintenance, and simulation testing"
     },
     {
       id: '7',
-      title: "Document Repository",
-      description: "Centralized storage for project documents, templates, and important reference materials"
+      title: "Post-Quantum Cryptography",
+      description: "Preparing for a quantum future with encryption techniques designed to withstand quantum computing attacks"
     },
     {
       id: '8',
-      title: "Team Calendar",
-      description: "Schedule and track team events, deadlines, and important project milestones"
+      title: "Federated Learning Systems",
+      description: "Privacy-preserving machine learning that trains algorithms across decentralized devices without sharing raw data"
     },
     {
       id: '9',
-      title: "Sprint Planning",
-      description: "Organize sprint goals, user stories, and track team velocity for agile development"
+      title: "eBPF Technology Deep Dive",
+      description: "How extended Berkeley Packet Filter is transforming Linux kernel programmability and observability"
     },
     {
       id: '10',
-      title: "Performance Metrics",
-      description: "Monitor and analyze team performance metrics, KPIs, and project progress indicators"
+      title: "Rust for Systems Programming",
+      description: "Why memory-safe programming with Rust is gaining traction for critical infrastructure and embedded systems"
     }
   ];
 

@@ -37,9 +37,13 @@ const OnboardingForm = () => {
             ...prev,
             linkedinId: cookies.linkedin_profile.linkedinId
           }));
-
+          console.log('User already logged in:', cookies.linkedin_profile);
+          
+          // Check if user has completed onboarding
           const response = await axios.get(`/api/onboard/getUserData`);
-          if (response.data) {
+          if (response.data && response.data.status === 200 && 
+              response.data.body && response.data.body.linkedinSpecs) {
+            // Only redirect if linkedinSpecs exists
             router.push('/app/home');
           }
         }

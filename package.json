@@ -22,8 +22,10 @@
     "multer": "^1.4.5-lts.1",
     "next": "15.1.7",
     "next-cloudinary": "^6.16.0",
+    "openai": "^4.87.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -69,12 +69,6 @@ const PreviewModal = ({ isOpen, onClose, postContent, postTitle, postImages }) =
           </div>
         </div>
         
-        {postTitle && (
-          <div className={titleClasses[activeDevice]}>
-            {postTitle}
-          </div>
-        )}
-        
         <div className={contentClasses[activeDevice]}>
           {postContent || "No content to preview"}
         </div>

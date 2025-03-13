@@ -5,12 +5,19 @@ const useDraftPost = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
-  const saveDraft = async (formData) => {
+  const saveDraft = async (formData, imageUrls = []) => {
     setIsSaving(true);
     setSaveSuccess(false);
     setSaveError(null);
     
     try {
+      // Add each imageUrl to the formData
+      if (imageUrls && imageUrls.length > 0) {
+        imageUrls.forEach(url => {
+          formData.append('imageUrls', url);
+        });
+      }
+      
       const response = await fetch('/api/posts/draftPost', {
         method: 'POST',
         body: formData, // Send FormData directly
