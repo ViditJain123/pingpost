@@ -12,7 +12,7 @@ export async function GET(request) {
         client_id: clientId,
         redirect_uri: redirectUri,
         state,
-        scope: 'openid profile email',
+        scope: 'openid profile email w_member_social',
     });
 
     const authUrl = `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;

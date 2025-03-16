@@ -13,9 +13,11 @@
     "@langchain/core": "^0.3.42",
     "@langchain/langgraph": "^0.2.54",
     "@langchain/openai": "^0.4.4",
+    "@nextui-org/react": "^2.6.11",
     "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
     "cloudinary": "^2.5.1",
-    "framer-motion": "^12.4.7",
+    "framer-motion": "^12.5.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.14.2",
     "mongoose": "^8.10.1",
@@ -25,6 +27,8 @@
     "openai": "^4.87.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-icons": "^5.5.0",
+    "youtube-transcript": "^1.2.1",
     "zod": "^3.24.2"
   },
   "devDependencies": {

@@ -5,6 +5,7 @@ import userModel from "@/models/userModel";
 import OpenAI from "openai";
 import { z } from "zod"; 
 import { zodResponseFormat } from "openai/helpers/zod";
+import { YoutubeTranscript } from 'youtube-transcript';
 
 
 export async function POST(request) {
@@ -41,6 +42,38 @@ export async function POST(request) {
     }
   };
 
+  const fetchArticle = async (url) => {
+    try {
+      // Extract video ID if a full URL is provided
+      let videoId = url;
+      
+      // Handle different YouTube URL formats
+      if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        const urlObj = new URL(url);
+        if (url.includes('youtube.com/watch')) {
+          videoId = urlObj.searchParams.get('v');
+        } else if (url.includes('youtu.be/')) {
+          videoId = urlObj.pathname.split('/')[1];
+        } else if (url.includes('youtube.com/embed/')) {
+          videoId = urlObj.pathname.split('/')[2];
+        }
+      }
+      
+      console.log("Video ID: " + videoId);
+      const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+      
+      if (!transcript || transcript.length === 0) {
+        console.log("No transcript found for the video");
+        return "";
+      }
+      console.log(transcript.map(item => item.text).join(' '))
+      return transcript.map(item => item.text).join(' ');
+    } catch (err) {
+      console.error("Error fetching YouTube transcript:", err);
+      return ""; // Return empty transcript if error occurs
+    }
+  }
+
   try {
     const cookieStore = await cookies();
     const linkedinProfileCookie = await cookieStore.get('linkedin_profile')?.value;
@@ -55,12 +88,20 @@ export async function POST(request) {
     const linkedinProfile = JSON.parse(linkedinProfileCookie);
     const linkedinId = linkedinProfile.linkedinId;
 
-    const { title, prompt } = await request.json();
+    const { title, prompt, articleUrl } = await request.json();
+    
+    const articleData = await fetchArticle(articleUrl);
+  //  console.log(articleData);
 
     const user = await userModel.findOne({ linkedinId });
     const linkedinSpecs = user.linkedinSpecs;
 
-    const userMessage = "Title: " + title + "/n" + "Prompt: " + prompt + "/n" + "Post Examples: " + linkedinSpecs.postExamples;
+  //  console.log(title);
+   // console.log(linkedinSpecs);
+
+    const userMessage = "Title: " + title + "/n" + "Prompt: " + prompt + "/n" + "Post Examples: " + linkedinSpecs.postExamples + "/n" + "Article: " + articleData;
+
+  //  console.log(userMessage);
 
     const completion = await client.chat.completions.create({
       model: "gpt-4o",
@@ -78,20 +119,24 @@ export async function POST(request) {
     });
 
     const response = completion.choices[0].message;
+ //   console.log(response);
 
     const parsedContent = JSON.parse(response.content);
+  //  console.log(parsedContent);
     
     const post = parsedContent.post;
     const googleSearchQuery = parsedContent.googleSearchQuery;
     
+  //  console.log(googleSearchQuery);
     const imageUrls = await googleSearch(googleSearchQuery);
+ //   console.log(imageUrls);
 
     return NextResponse.json(
-      { 
-        message: "Post generated successfully", 
-        post, 
+      {
+        message: "Post generated successfully",
+        post,
         googleSearchQuery, 
-        images: imageUrls // Changed from imageUrls to images to match the front-end expectation
+        images: imageUrls
       },
       { status: 200 }
     );

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Card from '@/components/home/Card';
 import Calendar from '@/components/home/Calender';
 import SearchBar from '@/components/home/SearchBar';
-
+import { usePosts } from '@/hooks/usePosts';
 
 export default function HomePage() {
   const router = useRouter();
@@ -12,59 +12,8 @@ export default function HomePage() {
   const [cardOffsets, setCardOffsets] = useState({});
   const [tasks, setTasks] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const cardData = [
-    {
-      id: '1',
-      title: "Quantum Computing Updates",
-      description: "Breaking down recent quantum computing breakthroughs and their potential impact on cryptography and optimization problems"
-    },
-    {
-      id: '2',
-      title: "Edge AI Implementation",
-      description: "How edge computing is revolutionizing AI deployment with real-time processing and reduced latency in IoT devices"
-    },
-    {
-      id: '3',
-      title: "Web3 Development Insights",
-      description: "Exploring decentralized applications, blockchain protocols, and the future of trustless infrastructure"
-    },
-    {
-      id: '4',
-      title: "RISC-V Architecture Adoption",
-      description: "The rise of open-source hardware architecture and how it's challenging traditional processor ecosystems"
-    },
-    {
-      id: '5',
-      title: "Neuromorphic Computing",
-      description: "Brain-inspired computing systems that promise to revolutionize machine learning and artificial intelligence"
-    },
-    {
-      id: '6',
-      title: "Digital Twin Technology",
-      description: "Virtual replicas of physical systems that enable real-time monitoring, predictive maintenance, and simulation testing"
-    },
-    {
-      id: '7',
-      title: "Post-Quantum Cryptography",
-      description: "Preparing for a quantum future with encryption techniques designed to withstand quantum computing attacks"
-    },
-    {
-      id: '8',
-      title: "Federated Learning Systems",
-      description: "Privacy-preserving machine learning that trains algorithms across decentralized devices without sharing raw data"
-    },
-    {
-      id: '9',
-      title: "eBPF Technology Deep Dive",
-      description: "How extended Berkeley Packet Filter is transforming Linux kernel programmability and observability"
-    },
-    {
-      id: '10',
-      title: "Rust for Systems Programming",
-      description: "Why memory-safe programming with Rust is gaining traction for critical infrastructure and embedded systems"
-    }
-  ];
+  const { posts: cardData, loading, error } = usePosts();
+  const [schedulingStatus, setSchedulingStatus] = useState({ loading: false, error: null, success: false });
 
   // Filter out cards that are already assigned to calendar
   const availableCards = cardData.filter(
@@ -86,7 +35,6 @@ export default function HomePage() {
 
   const handleCardHeightChange = useCallback((index, extraHeight) => {
     setCardOffsets(prev => {
-      // Only update if the height actually changed
       if (prev[index] === extraHeight) return prev;
 
       const newOffsets = { ...prev };
@@ -96,6 +44,69 @@ export default function HomePage() {
       return newOffsets;
     });
   }, [cardData.length]);
+
+  const scheduleSelectedPosts = async () => {
+    setSchedulingStatus({ loading: true, error: null, success: false });
+    
+    try {
+      const results = [];
+      console.log(`Attempting to schedule ${tasks.length} posts...`);
+      
+      for (const task of tasks) {
+        const post = cardData.find(card => card.id === task.id);
+        
+        if (!post) {
+          console.error(`Post with ID ${task.id} not found`);
+          continue;
+        }
+        
+        // Create formatted date for the API
+        const scheduleTimeDate = new Date(task.scheduleTime);
+        console.log(`Scheduling post "${post.title}" for ${scheduleTimeDate.toISOString()}`);
+        
+        // Call the API to schedule the post
+        const response = await fetch('/api/posts/schedulePost', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            postId: post.id,
+            content: post.content || post.description,
+            title: post.title,
+            scheduleTime: scheduleTimeDate.toISOString(),
+          }),
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to schedule post');
+        }
+        
+        console.log(`Successfully scheduled post: ${result.postId}`);
+        results.push(result);
+      }
+      
+      console.log(`All posts scheduled successfully: ${results.length} posts`);
+      setSchedulingStatus({ loading: false, error: null, success: true });
+      
+      setTasks([]);
+      
+      setTimeout(() => {
+        setIsModalOpen(false);
+        setSchedulingStatus({ loading: false, error: null, success: false });
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error scheduling posts:', error);
+      setSchedulingStatus({ 
+        loading: false, 
+        error: error.message || 'Failed to schedule posts', 
+        success: false 
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F9F9F9]">
@@ -109,25 +120,39 @@ export default function HomePage() {
 
           {/* Scrollable cards container */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
-            {filteredCards.map((card, index) => (
-              <div
-                key={card.id}
-                style={{
-                  transform: `translateY(${cardOffsets[index] || 0}px)`,
-                  transition: 'transform 200ms ease-in-out'
-                }}
-              >
-                <Card
-                  key={card.id}
-                  title={card.title}
-                  description={card.description}
-                  searchTerm={searchTerm}
-                  index={index}
-                  onHeightChange={handleCardHeightChange}
-                  id={card.id}
-                />
+            {loading ? (
+              <div className="flex justify-center items-center h-full">
+                <p className="text-gray-500">Loading posts...</p>
               </div>
-            ))}
+            ) : error ? (
+              <div className="flex justify-center items-center h-full">
+                <p className="text-red-500">Error loading posts: {error}</p>
+              </div>
+            ) : filteredCards.length === 0 ? (
+              <div className="flex justify-center items-center h-full">
+                <p className="text-gray-500">No posts found</p>
+              </div>
+            ) : (
+              filteredCards.map((card, index) => (
+                <div
+                  key={card.id}
+                  style={{
+                    transform: `translateY(${cardOffsets[index] || 0}px)`,
+                    transition: 'transform 200ms ease-in-out'
+                  }}
+                >
+                  <Card
+                    key={card.id}
+                    title={card.title}
+                    description={card.description}
+                    searchTerm={searchTerm}
+                    index={index}
+                    onHeightChange={handleCardHeightChange}
+                    id={card.id}
+                  />
+                </div>
+              ))
+            )}
           </div>
         </section>
 
@@ -155,25 +180,40 @@ export default function HomePage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
               <h3 className="text-xl font-semibold mb-4">Confirm Scheduling</h3>
-              <p className="mb-4">Are you sure you want to schedule these posts?</p>
-              <p className="text-gray-600 text-sm mb-6 p-4 bg-gray-50 rounded-lg">
-                Note: Once scheduled, you'll need to use the LinkedIn website or app to modify or delete the scheduled posts.
-              </p>
+              
+              {schedulingStatus.success ? (
+                <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-lg">
+                  Posts scheduled successfully!
+                </div>
+              ) : (
+                <>
+                  <p className="mb-4">Are you sure you want to schedule these {tasks.length} posts?</p>
+                  <p className="text-gray-600 text-sm mb-6 p-4 bg-gray-50 rounded-lg">
+                    Note: Posts will be published at the scheduled times based on your preferences.
+                  </p>
+                </>
+              )}
+              
+              {schedulingStatus.error && (
+                <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg">
+                  Error: {schedulingStatus.error}
+                </div>
+              )}
+              
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                  disabled={schedulingStatus.loading}
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    // Add your scheduling logic here
-                    setIsModalOpen(false);
-                  }}
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#4776E6] to-[#8E54E9] text-white hover:opacity-90 transition-opacity"
+                  onClick={scheduleSelectedPosts}
+                  disabled={schedulingStatus.loading || schedulingStatus.success}
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#4776E6] to-[#8E54E9] text-white hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
-                  Confirm
+                  {schedulingStatus.loading ? 'Scheduling...' : 'Confirm'}
                 </button>
               </div>
             </div>

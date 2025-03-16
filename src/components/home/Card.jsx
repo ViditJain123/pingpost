@@ -1,13 +1,17 @@
 import React from 'react';
 import Highlight from './Highlight';
 
-const Card = ({ title, searchTerm, id }) => {
+const Card = ({ title, searchTerm, id, postId }) => {
   return (
     <div 
       className="h-16"
       draggable
       onDragStart={(e) => {
-        e.dataTransfer.setData('text/plain', JSON.stringify({ id, title }));
+        e.dataTransfer.setData('text/plain', JSON.stringify({ 
+          id, 
+          title, 
+          postId: postId || id // Use the actual post ID if available
+        }));
         e.currentTarget.classList.add('opacity-50');
         e.currentTarget.style.cursor = 'grabbing';
       }}

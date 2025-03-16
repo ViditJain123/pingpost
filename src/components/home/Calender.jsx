@@ -43,8 +43,17 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
     
     try {
       const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+      
+      // Set the time to 12:00 PM for the selected date by default
+      const scheduleDate = new Date(date);
+      scheduleDate.setHours(12, 0, 0, 0);
+      
       const dateStr = date.toISOString().split('T')[0];
-      onTaskAdd({ ...data, date: dateStr });
+      onTaskAdd({ 
+        ...data, 
+        date: dateStr,
+        scheduleTime: scheduleDate.toISOString()  // Include the full ISO timestamp
+      });
     } catch (err) {
       console.error('Failed to parse drag data:', err);
     }

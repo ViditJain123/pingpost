@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { boolean } from "zod";
 
 const postSchema = new mongoose.Schema({
     linkedinId: {
@@ -26,6 +27,16 @@ const postSchema = new mongoose.Schema({
         enum: ["draft", "published", "scheduled"],
         required: true,
         default: "draft"
+    },
+    postSpecificSchedule: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
+    scheduleTime: {
+        type: Date,
+        required: false,
+        default: null
     },
     timeCreated: {
         type: Date,

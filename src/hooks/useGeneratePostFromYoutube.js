@@ -1,26 +1,26 @@
 import { useState } from 'react';
 
-const useGeneratePost = () => {
+const useGeneratePostFromArticle = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
 
-  const generatePost = async (title, prompt) => {
-    if (!title || !prompt) {
-      setError('Please provide a title and a prompt');
+  const generatePost = async (title, prompt, articleUrl) => {
+    if (!title || !prompt || !articleUrl) {
+      setError('Please provide a title, a article url and a prompt');
       return null;
     }
 
     setIsGenerating(true);
     setError(null);
-    console.log("Starting post generation with:", { title, prompt });
+    console.log("Starting post generation with:", { title, prompt, articleUrl });
 
     try {
-      const response = await fetch('/api/posts/generatePost', {
+      const response = await fetch('/api/posts/generatePostYoutube', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title, prompt }),
+        body: JSON.stringify({ title, prompt, articleUrl }),
       });
 
       console.log("API response status:", response.status);
@@ -51,4 +51,4 @@ const useGeneratePost = () => {
   };
 };
 
-export default useGeneratePost;
+export default useGeneratePostFromArticle;

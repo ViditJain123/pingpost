@@ -97,6 +97,8 @@ export async function POST(request) {
             postContent,
             images: allImageUrls, // Store all images in a single array
             postStatus: 'draft',
+            postSpecificSchedule: false,
+            scheduleTime: null,
         });
 
         await post.save();

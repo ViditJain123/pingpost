@@ -17,6 +17,16 @@ const linkedinSpecs = new mongoose.Schema({
         type: [String],
         required: true
     },
+    postScheduleFix: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
+    postScheduleFixTime:{
+        type: String,
+        required: false,
+        default: null
+    }
 });
 
 const userSchema = new mongoose.Schema({
@@ -41,6 +51,14 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    linkedinAccessToken: {
+        type: String,
+        required: false
+    },
+    linkedinTokenExpiry: {
+        type: Date,
+        required: false
+    },
     linkedinSpecs: {
         type: linkedinSpecs,
         required: false
@@ -52,7 +70,6 @@ const userSchema = new mongoose.Schema({
     }
 });
 
-// Check if the model exists before creating a new one
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 
 export default User;

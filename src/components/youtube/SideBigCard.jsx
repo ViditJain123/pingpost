@@ -5,34 +5,32 @@ import useImageUpload from '../../hooks/useImageUpload';
 import useAudioRecording from '../../hooks/useAudioRecording';
 import useModifications from '../../hooks/useModifications';
 import useDraftPost from '../../hooks/useDraftPost';
-import useGeneratePost from '../../hooks/useGeneratePost';
-import usePublishPost from '../../hooks/usePublishPost';
+import useGeneratePostFromYoutube from '../../hooks/useGeneratePostFromYoutube';
 import PreviewModal from './PreviewModal';
 
-// Import the new component files
 import TitleInput from './sidebigcard/TitleInput';
 import AIPromptSection from './sidebigcard/AIPromptSection';
 import APIImageSection from './sidebigcard/APIImageSection';
 import ImageUploadSection from './sidebigcard/ImageUploadSection';
 import ActionButtons from './sidebigcard/ActionButtons';
+import ArticleUrlInput from './sidebigcard/ArticleUrlInput';
 
 const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus }) => {
   const [showDraftTooltip, setShowDraftTooltip] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [aiModificationText, setAiModificationText] = useState('');
   const [title, setTitle] = useState('');
+  const [articleUrl, setArticleUrl] = useState('');
   const [saveStatus, setSaveStatus] = useState(null);
   const [isFirstGeneration, setIsFirstGeneration] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [apiImageUrls, setApiImageUrls] = useState([]);
-  const [postStatus, setPostStatus] = useState(null); // 'posting', 'success', 'error'
 
   const [imageSourceMap, setImageSourceMap] = useState({});
 
   const { uploadedImages, handleImageUpload, removeImage: originalRemoveImage, maxImagesReached, imageFiles, addImageFromUrl, clearImages } = useImageUpload(4);
   const { saveDraft, isSaving, saveSuccess, saveError } = useDraftPost();
-  const { publishPost, isPublishing, publishSuccess, publishError } = usePublishPost();
-  const { generatePost, isGenerating, error: generateError } = useGeneratePost();
+  const { generatePost, isGenerating, error: generateError } = useGeneratePostFromYoutube();
   
   useEffect(() => {
     if (generateError) {
@@ -74,6 +72,7 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
       const formData = new FormData();
       formData.append('title', title || 'Untitled');
       formData.append('postContent', postContent || '');
+      formData.append('articleUrl', articleUrl || '');
       
       // Prepare array of image URLs to pass to the saveDraft function
       const imageUrlsToSave = [];
@@ -145,8 +144,8 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
   };
 
   const handleModifyButtonClick = async () => {
-    if (!title.trim() || !aiModificationText.trim()) {
-      setErrorMessage('Please provide both a title and a prompt');
+    if (!title.trim() || !aiModificationText.trim() || !articleUrl.trim()) {
+      setErrorMessage('Please provide a title, article URL, and prompt');
       setTimeout(() => setErrorMessage(''), 5000);
       return;
     }
@@ -155,8 +154,8 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
 
     if (isFirstGeneration) {
       try {
-        console.log("Generating first post with:", { title, aiModificationText });
-        const result = await generatePost(title, aiModificationText);
+        console.log("Generating first post with:", { title, aiModificationText, articleUrl });
+        const result = await generatePost(title, aiModificationText, articleUrl);
         console.log("Generation result:", result);
         
         if (result) {
@@ -188,8 +187,8 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
     } else {
       decrementModifications();
       try {
-        console.log("Modifying post with:", { title, aiModificationText });
-        const result = await generatePost(title, aiModificationText);
+        console.log("Modifying post with:", { title, aiModificationText, articleUrl });
+        const result = await generatePost(title, aiModificationText, articleUrl);
         console.log("Modification result:", result);
         
         if (result) {
@@ -241,58 +240,6 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
     }
   };
 
-  const handlePublishPost = async () => {
-    if (!postContent || postContent.trim() === '') {
-      setErrorMessage('Please generate content before publishing');
-      setTimeout(() => setErrorMessage(''), 5000);
-      return;
-    }
-    
-    setPostStatus('posting');
-    
-    try {
-      // Collect all images to send
-      const imagesToSend = [...imageFiles];
-      
-      // Add API-sourced images that were selected
-      uploadedImages.forEach(imageUrl => {
-        if (imageSourceMap[imageUrl] === 'api') {
-          // Include API image URLs
-          imagesToSend.push(imageUrl);
-        }
-      });
-      
-      const result = await publishPost(postContent, title, imagesToSend);
-      
-      if (result) {
-        setPostStatus('success');
-        
-        // Clear form data after successful posting
-        setTitle('');
-        setAiModificationText('');
-        clearImages();
-        setApiImageUrls([]);
-        setImageSourceMap({});
-        onUpdatePostContent('');
-        
-        setTimeout(() => {
-          setPostStatus(null);
-        }, 3000);
-      } else {
-        setPostStatus('error');
-        setTimeout(() => {
-          setPostStatus(null);
-        }, 5000);
-      }
-    } catch (error) {
-      console.error("Error publishing post:", error);
-      setPostStatus('error');
-      setTimeout(() => {
-        setPostStatus(null);
-      }, 5000);
-    }
-  };
-
   return (
     <div className="bg-white rounded-xl shadow-lg p-7 w-full border border-gray-100">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Write your post</h2>
@@ -303,6 +250,14 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
           setTitle={setTitle} 
           isGenerating={isGenerating} 
           errorMessage={errorMessage} 
+        />
+        
+        {/* Article URL input component */}
+        <ArticleUrlInput
+          articleUrl={articleUrl}
+          setArticleUrl={setArticleUrl}
+          isGenerating={isGenerating}
+          errorMessage={errorMessage}
         />
         
         {/* AI prompt section component */}
@@ -335,18 +290,15 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
           maxImagesReached={maxImagesReached}
         />
 
-        {/* Action Buttons component - Updated to include Post button */}
+        {/* Action Buttons component */}
         <ActionButtons 
           handleSaveDraft={handleSaveDraft}
-          handlePublishPost={handlePublishPost}
           isSaving={isSaving}
-          isPublishing={isPublishing}
           isGenerating={isGenerating}
           showDraftTooltip={showDraftTooltip}
           setShowDraftTooltip={setShowDraftTooltip}
           setShowPreviewModal={setShowPreviewModal}
           saveStatus={saveStatus}
-          postStatus={postStatus}
         />
       </div>
       
@@ -357,6 +309,7 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
         postContent={postContent}
         postTitle={title}
         postImages={uploadedImages}
+        articleUrl={articleUrl}
       />
     </div>
   );

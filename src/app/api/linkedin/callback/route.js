@@ -52,13 +52,22 @@ export async function GET(request) {
         firstName: profileData.given_name,
         lastName: profileData.family_name,
         email: profileData.email,
-        profilePicture: profileData.picture
+        profilePicture: profileData.picture,
+        linkedinAccessToken: accessToken, // Store the access token
+        linkedinTokenExpiry: new Date(Date.now() + tokenData.expires_in * 1000), // Store token expiry
+        postScheduleFix: false,
+        postScheduleFixTime: null,
     };
 
     const user = await userModel.findOne({ linkedinId: userData.linkedinId });
 
     try {
         if (user) {
+            // Update the user with the new access token
+            user.linkedinAccessToken = accessToken;
+            user.linkedinTokenExpiry = new Date(Date.now() + tokenData.expires_in * 1000);
+            await user.save();
+            
             // Check if user exists and has linkedinSpecs with audience
             if (user.linkedinSpecs && user.linkedinSpecs.audience) {
                 console.log("Existing user with specs");
