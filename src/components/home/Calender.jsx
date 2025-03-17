@@ -52,10 +52,25 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
       onTaskAdd({ 
         ...data, 
         date: dateStr,
-        scheduleTime: scheduleDate.toISOString()  // Include the full ISO timestamp
+        scheduleTime: scheduleDate.toISOString(),  // Include the full ISO timestamp
+        status: 'draft' // Mark as draft initially
       });
     } catch (err) {
       console.error('Failed to parse drag data:', err);
+    }
+  };
+
+  // Get task background color based on status
+  const getTaskColor = (status) => {
+    switch(status) {
+      case 'published':
+        return 'bg-gray-200 text-gray-700';
+      case 'scheduled':
+        return 'bg-[#FAE2EC] text-[#1F1F1F]';
+      case 'failed':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-[#FAE2EC] text-[#1F1F1F]';
     }
   };
 
@@ -144,18 +159,21 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
                       {dayTasks.map(task => (
                         <div 
                           key={task.id}
-                          className="bg-[#FAE2EC] text-sm p-1 rounded mb-1 flex items-center justify-between animate-fade-in group"
+                          className={`${getTaskColor(task.status)} text-sm p-1 rounded mb-1 flex items-center justify-between animate-fade-in group`}
                         >
                           <span className="truncate flex-1">{task.title}</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onTaskRemove(task.id);
-                            }}
-                            className="ml-1 text-gray-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            ×
-                          </button>
+                          {task.status !== 'published' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onTaskRemove(task.id);
+                              }}
+                              className="ml-1 text-gray-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                              title={task.status === 'scheduled' ? "Cancel scheduled post" : "Remove"}
+                            >
+                              {task.status === 'scheduled' ? '⨯' : '×'}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>

@@ -6,6 +6,21 @@ on:
     - cron: '* * * * *'
   # Allow manual triggering for testing
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to run against'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+      debug:
+        description: 'Enable debug mode'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   publish-scheduled-posts:
@@ -18,4 +33,4 @@ jobs:
         
       - name: Log completion
         run: echo "Scheduled posts publication triggered"
- 
+

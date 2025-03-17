@@ -21,7 +21,10 @@ export function usePosts() {
           const formattedPosts = data.posts.map(post => ({
             id: post._id,
             title: post.title || 'Untitled Post',
-            description: post.content || 'No description provided'
+            description: post.postContent || post.content || 'No description provided',
+            status: post.postStatus || 'draft',
+            scheduleTime: post.scheduleTime || null,
+            content: post.postContent || post.content
           }));
           
           setPosts(formattedPosts);

@@ -15,9 +15,31 @@ export default function HomePage() {
   const { posts: cardData, loading, error } = usePosts();
   const [schedulingStatus, setSchedulingStatus] = useState({ loading: false, error: null, success: false });
 
-  // Filter out cards that are already assigned to calendar
+  // Initialize calendar with scheduled and published posts
+  useEffect(() => {
+    if (cardData.length > 0) {
+      const calendarTasks = cardData
+        .filter(post => post.status === 'scheduled' || post.status === 'published')
+        .map(post => {
+          const scheduleDate = new Date(post.scheduleTime);
+          const dateStr = scheduleDate.toISOString().split('T')[0];
+          
+          return {
+            id: post.id,
+            title: post.title,
+            date: dateStr,
+            scheduleTime: post.scheduleTime,
+            status: post.status
+          };
+        });
+      
+      setTasks(calendarTasks);
+    }
+  }, [cardData]);
+
+  // Filter out cards that are already assigned to calendar or published
   const availableCards = cardData.filter(
-    card => !tasks.some(task => task.id === card.id)
+    card => !tasks.some(task => task.id === card.id) && card.status === 'draft'
   );
 
   const filteredCards = availableCards.filter(card =>
@@ -30,7 +52,43 @@ export default function HomePage() {
   };
 
   const handleTaskRemove = (taskId) => {
-    setTasks(prev => prev.filter(task => task.id !== taskId));
+    // Find the task to check its status
+    const taskToRemove = tasks.find(task => task.id === taskId);
+    
+    if (taskToRemove && taskToRemove.status === 'scheduled') {
+      // For scheduled posts, update status to draft
+      cancelScheduledPost(taskId);
+    } else if (taskToRemove && taskToRemove.status !== 'published') {
+      // Only remove if it's not published
+      setTasks(prev => prev.filter(task => task.id !== taskId));
+    }
+  };
+
+  const cancelScheduledPost = async (postId) => {
+    try {
+      const response = await fetch('/api/posts/cancelScheduledPost', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ postId }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to cancel scheduled post');
+      }
+      
+      console.log(`Successfully cancelled scheduled post: ${postId}`);
+      
+      // Remove the task from the calendar
+      setTasks(prev => prev.filter(task => task.id !== postId));
+      
+    } catch (error) {
+      console.error('Error cancelling scheduled post:', error);
+      alert('Failed to cancel scheduled post: ' + error.message);
+    }
   };
 
   const handleCardHeightChange = useCallback((index, extraHeight) => {
@@ -52,7 +110,12 @@ export default function HomePage() {
       const results = [];
       console.log(`Attempting to schedule ${tasks.length} posts...`);
       
-      for (const task of tasks) {
+      // Only schedule posts that aren't already scheduled or published
+      const postsToSchedule = tasks.filter(task => 
+        !task.status || task.status === 'draft'
+      );
+      
+      for (const task of postsToSchedule) {
         const post = cardData.find(card => card.id === task.id);
         
         if (!post) {
@@ -85,13 +148,19 @@ export default function HomePage() {
         }
         
         console.log(`Successfully scheduled post: ${result.postId}`);
+        
+        // Update the task status in the tasks array
+        setTasks(prev => prev.map(task => 
+          task.id === post.id 
+            ? { ...task, status: 'scheduled' } 
+            : task
+        ));
+        
         results.push(result);
       }
       
       console.log(`All posts scheduled successfully: ${results.length} posts`);
       setSchedulingStatus({ loading: false, error: null, success: true });
-      
-      setTasks([]);
       
       setTimeout(() => {
         setIsModalOpen(false);
