@@ -33,4 +33,4 @@ export async function POST(req) {
   }
 }
 
-export const maxDuration = 120;
+export const maxDuration = 60; // Changed from 120 to 60 to comply with Vercel hobby plan limits
