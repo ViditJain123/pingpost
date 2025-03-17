@@ -19,12 +19,17 @@ export async function GET(request) {
     let postsToPublish = [];
     
     // 1. Find posts with specific schedule times that are due
+    // This will get all posts with scheduleTime in the past
     const postsWithSpecificSchedule = await postModel.find({
       postStatus: "scheduled",
       postSpecificSchedule: true,
       scheduleTime: { $lte: now }
     });
     
+    // Add all posts with specific schedules in the past to the list
+    postsToPublish = [...postsToPublish, ...postsWithSpecificSchedule];
+    
+    // 2. Process posts without specific schedule times (based on fixed schedule)
     const postsWithoutSpecificSchedule = await postModel.find({
       postStatus: "scheduled",
       postSpecificSchedule: false
@@ -66,9 +71,6 @@ export async function GET(request) {
       }
     }
     
-    // Add posts with specific schedules to the list
-    postsToPublish = [...postsToPublish, ...postsWithSpecificSchedule];
-    
     console.log(`Found ${postsToPublish.length} posts to publish`);
     
     const results = [];
@@ -84,6 +86,11 @@ export async function GET(request) {
             status: "failed",
             error: "User not found or missing access token"
           });
+          
+          // Update post status to failed
+          post.postStatus = "failed";
+          post.timeUpdated = new Date();
+          await post.save();
           continue;
         }
         
@@ -199,6 +206,7 @@ export async function GET(request) {
         // Update post status to published
         post.postStatus = "published";
         post.timePublished = new Date();
+        post.timeUpdated = new Date();
         await post.save();
         
         console.log(`Successfully published post ${post._id} to LinkedIn (ID: ${linkedInResponse.data.id})`);
@@ -223,9 +231,9 @@ export async function GET(request) {
       } catch (postError) {
         console.error(`Error publishing post ${post._id}:`, postError);
         
-        // Optionally update post status to failed
+        // Update post status to failed
         try {
-          post.postStatus = "failed";  // You may want to add this status to your enum
+          post.postStatus = "failed";
           post.timeUpdated = new Date();
           await post.save();
           console.log(`Updated post ${post._id} status to failed`);
