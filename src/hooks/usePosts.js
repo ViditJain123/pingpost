@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 export function usePosts() {
@@ -6,6 +6,13 @@ export function usePosts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
+
+  const refetch = useCallback(() => {
+    console.log("Refetching posts...");
+    setLoading(true);
+    setRefetchTrigger(prev => prev + 1);
+  }, []);
 
   useEffect(() => {
     async function fetchPosts() {
@@ -33,13 +40,14 @@ export function usePosts() {
         }
       } catch (err) {
         console.error('Error fetching posts:', err);
+        setError(err.message);
       } finally {
         setLoading(false);
       }
     }
 
     fetchPosts();
-  }, []);
+  }, [refetchTrigger]); // Add refetchTrigger as a dependency
 
-  return { posts, loading, error, isAuthenticated };
+  return { posts, loading, error, isAuthenticated, refetch };
 }
