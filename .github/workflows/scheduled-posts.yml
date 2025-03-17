@@ -13,8 +13,8 @@ jobs:
     steps:
       - name: Trigger Publishing API
         run: |
-          curl -X GET ${{ secrets.DEPLOYMENT_URL }}/api/cron/publishScheduled \ 
-          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          curl -X GET https://pingpost.vercel.app/api/cron/publishScheduled \ 
+          -H "Authorization: Bearer TestCronSec"
         
       - name: Log completion
         run: echo "Scheduled posts publication triggered"
