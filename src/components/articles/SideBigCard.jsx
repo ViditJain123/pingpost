@@ -6,6 +6,7 @@ import useAudioRecording from '../../hooks/useAudioRecording';
 import useModifications from '../../hooks/useModifications';
 import useDraftPost from '../../hooks/useDraftPost';
 import useGeneratePostFromArticle from '../../hooks/useGeneratePostFromArticle';
+import usePublishPost from '../../hooks/usePublishPost';
 import PreviewModal from './PreviewModal';
 
 import TitleInput from './sidebigcard/TitleInput';
@@ -25,11 +26,13 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
   const [isFirstGeneration, setIsFirstGeneration] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [apiImageUrls, setApiImageUrls] = useState([]);
+  const [postStatus, setPostStatus] = useState(null); // 'posting', 'success', 'error'
 
   const [imageSourceMap, setImageSourceMap] = useState({});
 
   const { uploadedImages, handleImageUpload, removeImage: originalRemoveImage, maxImagesReached, imageFiles, addImageFromUrl, clearImages } = useImageUpload(4);
   const { saveDraft, isSaving, saveSuccess, saveError } = useDraftPost();
+  const { publishPost, isPublishing, publishSuccess, publishError } = usePublishPost();
   const { generatePost, isGenerating, error: generateError } = useGeneratePostFromArticle();
   
   useEffect(() => {
@@ -240,6 +243,60 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
     }
   };
 
+  const handlePublishPost = async () => {
+    if (!postContent || postContent.trim() === '') {
+      setErrorMessage('Please generate content before publishing');
+      setTimeout(() => setErrorMessage(''), 5000);
+      return;
+    }
+    
+    setPostStatus('posting');
+    
+    try {
+      // Collect all images to send
+      const imagesToSend = [...imageFiles];
+      
+      // Add API-sourced images that were selected
+      uploadedImages.forEach(imageUrl => {
+        if (imageSourceMap[imageUrl] === 'api') {
+          // Include API image URLs
+          imagesToSend.push(imageUrl);
+        }
+      });
+      
+      // Pass articleUrl but don't use it as the visibility parameter
+      // Using 'PUBLIC' as the default visibility
+      const result = await publishPost(postContent, title, imagesToSend, articleUrl, 'PUBLIC');
+      
+      if (result) {
+        setPostStatus('success');
+        
+        // Clear form data after successful posting
+        setTitle('');
+        setAiModificationText('');
+        clearImages();
+        setApiImageUrls([]);
+        setImageSourceMap({});
+        onUpdatePostContent('');
+        
+        setTimeout(() => {
+          setPostStatus(null);
+        }, 3000);
+      } else {
+        setPostStatus('error');
+        setTimeout(() => {
+          setPostStatus(null);
+        }, 5000);
+      }
+    } catch (error) {
+      console.error("Error publishing post:", error);
+      setPostStatus('error');
+      setTimeout(() => {
+        setPostStatus(null);
+      }, 5000);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg p-7 w-full border border-gray-100">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Write your post</h2>
@@ -293,12 +350,15 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
         {/* Action Buttons component */}
         <ActionButtons 
           handleSaveDraft={handleSaveDraft}
+          handlePublishPost={handlePublishPost}
           isSaving={isSaving}
+          isPublishing={isPublishing}
           isGenerating={isGenerating}
           showDraftTooltip={showDraftTooltip}
           setShowDraftTooltip={setShowDraftTooltip}
           setShowPreviewModal={setShowPreviewModal}
           saveStatus={saveStatus}
+          postStatus={postStatus}
         />
       </div>
       

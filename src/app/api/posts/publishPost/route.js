@@ -51,6 +51,9 @@ export async function POST(request) {
         if (images && images.length > 0) {
             for (const image of images) {
                 try {
+                    // Skip if the image is a string URL (will be handled in the imageUrls section)
+                    if (typeof image === 'string') continue;
+                    
                     const bytes = await image.arrayBuffer();
                     const buffer = Buffer.from(bytes);
                     
@@ -70,7 +73,8 @@ export async function POST(request) {
                         {
                             headers: {
                                 'Authorization': `Bearer ${user.linkedinAccessToken}`,
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/json',
+                                'X-Restli-Protocol-Version': '2.0.0'  // Add LinkedIn's protocol version
                             }
                         }
                     );
@@ -88,7 +92,10 @@ export async function POST(request) {
                     
                     mediaAssets.push(assetId);
                 } catch (imageError) {
-                    console.error("Error uploading image:", imageError);
+                    console.error("Error uploading image:", imageError.message);
+                    if (imageError.response) {
+                        console.error("LinkedIn API response:", imageError.response.data);
+                    }
                 }
             }
         }
@@ -118,7 +125,8 @@ export async function POST(request) {
                         {
                             headers: {
                                 'Authorization': `Bearer ${user.linkedinAccessToken}`,
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/json',
+                                'X-Restli-Protocol-Version': '2.0.0'  // Add LinkedIn's protocol version
                             }
                         }
                     );
@@ -130,19 +138,25 @@ export async function POST(request) {
                     await axios.put(uploadUrl, imageResponse.data, {
                         headers: {
                             'Authorization': `Bearer ${user.linkedinAccessToken}`,
-                            'Content-Type': imageResponse.headers['content-type']
+                            'Content-Type': imageResponse.headers['content-type'] || 'image/jpeg'
                         }
                     });
                     
                     mediaAssets.push(assetId);
                 } catch (imageError) {
-                    console.error("Error uploading image URL:", imageError);
+                    console.error("Error uploading image URL:", imageError.message);
+                    if (imageError.response) {
+                        console.error("LinkedIn API response:", imageError.response.data);
+                    }
                 }
             }
         }
         
         // Prepare post data based on whether we have media to include
         let postData;
+        
+        // Ensure content is within LinkedIn's limits (approximately 3000 characters)
+        const trimmedContent = content.length > 3000 ? content.substring(0, 2990) + '...' : content;
         
         if (mediaAssets.length > 0) {
             // Post with images
@@ -152,7 +166,7 @@ export async function POST(request) {
                 specificContent: {
                     "com.linkedin.ugc.ShareContent": {
                         shareCommentary: {
-                            text: content
+                            text: trimmedContent
                         },
                         shareMediaCategory: "IMAGE",
                         media: mediaAssets.map(mediaId => ({
@@ -176,7 +190,7 @@ export async function POST(request) {
                 specificContent: {
                     "com.linkedin.ugc.ShareContent": {
                         shareCommentary: {
-                            text: content
+                            text: trimmedContent
                         },
                         shareMediaCategory: "NONE"
                     }
@@ -187,13 +201,16 @@ export async function POST(request) {
             };
         }
         
+        console.log("Sending post to LinkedIn:", JSON.stringify(postData, null, 2));
+        
         const linkedInResponse = await axios.post(
             'https://api.linkedin.com/v2/ugcPosts',
             postData,
             {
                 headers: {
                     'Authorization': `Bearer ${user.linkedinAccessToken}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-Restli-Protocol-Version': '2.0.0'  // Add LinkedIn's protocol version
                 }
             }
         );
@@ -217,13 +234,21 @@ export async function POST(request) {
         });
         
     } catch (error) {
-        console.error("Error publishing post:", error);
+        console.error("Error publishing post:", error.message);
+        
+        // Enhanced error logging
+        if (error.response) {
+            console.error("Response status:", error.response.status);
+            console.error("Response headers:", error.response.headers);
+            console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+        }
         
         // Handle LinkedIn API specific errors
         if (error.response && error.response.data) {
             return NextResponse.json({
                 error: "LinkedIn API error",
-                details: error.response.data
+                details: error.response.data,
+                message: error.message
             }, { status: error.response.status || 500 });
         }
         

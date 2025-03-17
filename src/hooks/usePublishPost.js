@@ -5,7 +5,7 @@ const usePublishPost = () => {
   const [publishSuccess, setPublishSuccess] = useState(false);
   const [publishError, setPublishError] = useState(null);
 
-  const publishPost = async (content, title, images, visibility = 'PUBLIC') => {
+  const publishPost = async (content, title, images, articleUrl, visibility = 'PUBLIC') => {
     setIsPublishing(true);
     setPublishSuccess(false);
     setPublishError(null);
@@ -14,7 +14,15 @@ const usePublishPost = () => {
       const formData = new FormData();
       formData.append('content', content);
       formData.append('title', title);
+      
+      // Send visibility as a valid LinkedIn value, not the article URL
       formData.append('visibility', visibility);
+      
+      // We'll still collect the articleUrl for potential internal usage
+      // but won't use it for the LinkedIn post visibility
+      if (articleUrl) {
+        formData.append('articleUrl', articleUrl);
+      }
 
       // Append any image files
       if (images && images.length > 0) {

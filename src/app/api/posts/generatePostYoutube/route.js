@@ -3,10 +3,9 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import userModel from "@/models/userModel";
 import OpenAI from "openai";
-import { z } from "zod"; 
+import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
-import { YoutubeTranscript } from 'youtube-transcript';
-
+import { YoutubeTranscript } from "youtube-transcript";
 
 export async function POST(request) {
   await dbConnect();
@@ -23,10 +22,10 @@ export async function POST(request) {
     const search_engine_id = process.env.SEARCH_ENGINE_ID;
 
     const url = `https://www.googleapis.com/customsearch/v1?` +
-              `key=${api_key}` +
-              `&cx=${search_engine_id}` +
-              `&q=${encodeURIComponent(query)}` +
-              `&searchType=image`;
+      `key=${api_key}` +
+      `&cx=${search_engine_id}` +
+      `&q=${encodeURIComponent(query)}` +
+      `&searchType=image`;
 
     try {
       const response = await fetch(url);
@@ -46,7 +45,7 @@ export async function POST(request) {
     try {
       // Extract video ID if a full URL is provided
       let videoId = url;
-      
+
       // Handle different YouTube URL formats
       if (url.includes('youtube.com') || url.includes('youtu.be')) {
         const urlObj = new URL(url);
@@ -58,10 +57,10 @@ export async function POST(request) {
           videoId = urlObj.pathname.split('/')[2];
         }
       }
-      
+
       console.log("Video ID: " + videoId);
       const transcript = await YoutubeTranscript.fetchTranscript(videoId);
-      
+
       if (!transcript || transcript.length === 0) {
         console.log("No transcript found for the video");
         return "";
@@ -89,19 +88,19 @@ export async function POST(request) {
     const linkedinId = linkedinProfile.linkedinId;
 
     const { title, prompt, articleUrl } = await request.json();
-    
+
     const articleData = await fetchArticle(articleUrl);
-  //  console.log(articleData);
+    console.log(articleData);
 
     const user = await userModel.findOne({ linkedinId });
     const linkedinSpecs = user.linkedinSpecs;
 
-  //  console.log(title);
-   // console.log(linkedinSpecs);
+    console.log(title);
+    console.log(linkedinSpecs);
 
     const userMessage = "Title: " + title + "/n" + "Prompt: " + prompt + "/n" + "Post Examples: " + linkedinSpecs.postExamples + "/n" + "Article: " + articleData;
 
-  //  console.log(userMessage);
+    console.log(userMessage);
 
     const completion = await client.chat.completions.create({
       model: "gpt-4o",
@@ -119,23 +118,23 @@ export async function POST(request) {
     });
 
     const response = completion.choices[0].message;
- //   console.log(response);
+    console.log(response);
 
     const parsedContent = JSON.parse(response.content);
-  //  console.log(parsedContent);
-    
+    console.log(parsedContent);
+
     const post = parsedContent.post;
     const googleSearchQuery = parsedContent.googleSearchQuery;
-    
-  //  console.log(googleSearchQuery);
+
+    console.log(googleSearchQuery);
     const imageUrls = await googleSearch(googleSearchQuery);
- //   console.log(imageUrls);
+    console.log(imageUrls);
 
     return NextResponse.json(
       {
         message: "Post generated successfully",
         post,
-        googleSearchQuery, 
+        googleSearchQuery,
         images: imageUrls
       },
       { status: 200 }
