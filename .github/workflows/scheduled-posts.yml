@@ -1,0 +1,21 @@
+name: Scheduled Posts Publisher
+
+on:
+  schedule:
+    # Runs every minute (* * * * *)
+    - cron: '* * * * *'
+  # Allow manual triggering for testing
+  workflow_dispatch:
+
+jobs:
+  publish-scheduled-posts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Publishing API
+        run: |
+          curl -X GET ${{ secrets.DEPLOYMENT_URL }}/api/cron/publishScheduled \ 
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+        
+      - name: Log completion
+        run: echo "Scheduled posts publication triggered"
+ 

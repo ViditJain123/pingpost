@@ -4,9 +4,15 @@ import dbConnect from "@/utils/dbConnect";
 import userModel from "@/models/userModel";
 import postModel from "@/models/postModel";
 
-// This function will be triggered by Vercel Cron
+// This function can be triggered by GitHub Actions or Vercel Cron
 export async function GET(request) {
   try {
+    // Check for authorization if needed - you can add a secret token check here
+    // const authHeader = request.headers.get('authorization');
+    // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // }
+
     await dbConnect();
     
     const now = new Date();
@@ -23,10 +29,8 @@ export async function GET(request) {
       postStatus: "scheduled",
       postSpecificSchedule: false
     });
-    
-    // Process the posts without specific schedule
+  
     if (postsWithoutSpecificSchedule.length > 0) {
-      // Group posts by user
       const postsByUser = {};
       
       postsWithoutSpecificSchedule.forEach(post => {
