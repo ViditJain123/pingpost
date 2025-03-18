@@ -59,17 +59,31 @@ export async function POST(request) {
       }
 
       console.log("Video ID: " + videoId);
-      const transcript = await YoutubeTranscript.fetchTranscript(videoId);
-
-      if (!transcript || transcript.length === 0) {
-        console.log("No transcript found for the video");
-        return "";
+      
+      try {
+        const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+        
+        if (!transcript || transcript.length === 0) {
+          console.log("No transcript found for the video");
+          return "No transcript available for this video. Please provide additional context in your prompt.";
+        }
+        
+        console.log(transcript.map(item => item.text).join(' '));
+        return transcript.map(item => item.text).join(' ');
+      } catch (transcriptError) {
+        console.error("Error fetching YouTube transcript:", transcriptError);
+        
+        // Handle specific error for disabled transcripts
+        if (transcriptError.message.includes("disabled on this video")) {
+          return "Transcript is disabled for this video. Please provide additional context about the video content in your prompt.";
+        }
+        
+        // Generic error handling
+        return "Unable to retrieve transcript from this video. Please provide additional context about the video content in your prompt.";
       }
-      console.log(transcript.map(item => item.text).join(' '))
-      return transcript.map(item => item.text).join(' ');
     } catch (err) {
-      console.error("Error fetching YouTube transcript:", err);
-      return ""; // Return empty transcript if error occurs
+      console.error("Error processing YouTube URL:", err);
+      return "Invalid YouTube URL or ID. Please check the URL and try again.";
     }
   }
 
@@ -91,6 +105,14 @@ export async function POST(request) {
 
     const articleData = await fetchArticle(articleUrl);
     console.log(articleData);
+
+    // Check if we got a valid transcript or an error message
+    if (articleData.includes("disabled for this video") || 
+        articleData.includes("Unable to retrieve transcript") || 
+        articleData.includes("Invalid YouTube URL")) {
+      // Still proceed, but let the user know about the transcript issue
+      console.log("Proceeding with limited video data:", articleData);
+    }
 
     const user = await userModel.findOne({ linkedinId });
     const linkedinSpecs = user.linkedinSpecs;

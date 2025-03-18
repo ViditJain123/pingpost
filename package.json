@@ -25,6 +25,8 @@
     "next": "15.1.7",
     "next-cloudinary": "^6.16.0",
     "openai": "^4.87.3",
+    "puppeteer": "^24.4.0",
+    "puppeteer-core": "^24.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-icons": "^5.5.0",

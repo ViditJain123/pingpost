@@ -5,8 +5,8 @@ import userModel from "@/models/userModel";
 import OpenAI from "openai";
 import { z } from "zod"; 
 import { zodResponseFormat } from "openai/helpers/zod";
-import axios from "axios";
-import * as cheerio from "cheerio";
+import puppeteer from 'puppeteer';
+
 
 export async function POST(request) {
   await dbConnect();
@@ -44,16 +44,22 @@ export async function POST(request) {
 
   const fetchArticle = async (url) => {
     try {
-        const { data } = await axios.get(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0',
-            },
-        });
-        const $ = cheerio.load(data);
-        const fullText = $('body').text().trim();
-        return fullText;
-    } catch (err) {
-        console.error(err);
+      // Launch Puppeteer with no sandbox (helpful in some hosting environments)
+      const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+      const page = await browser.newPage();
+  
+      // Navigate to the provided URL and wait until network activity is low
+      await page.goto(url, { waitUntil: 'networkidle2' });
+  
+      // Evaluate the page to extract only the plain text from the document body
+      const text = await page.evaluate(() => document.body.innerText);
+  
+      await browser.close();
+  
+      return text.trim();
+    } catch (error) {
+      console.error('Error scraping URL:', error);
+      return '';
     }
   }
 
