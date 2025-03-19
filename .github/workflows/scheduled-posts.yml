@@ -2,9 +2,7 @@ name: Scheduled Posts Publisher
 
 on:
   schedule:
-    # Runs every minute (* * * * *)
     - cron: '* * * * *'
-  # Allow manual triggering for testing
   workflow_dispatch:
     inputs:
       environment:
@@ -33,4 +31,6 @@ jobs:
         
       - name: Log completion
         run: echo "Scheduled posts publication triggered"
+
+        
 

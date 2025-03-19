@@ -56,11 +56,24 @@ export async function POST(request) {
         } else if (url.includes('youtube.com/embed/')) {
           videoId = urlObj.pathname.split('/')[2];
         }
+      } else if (!url.includes('youtube.com') && !url.includes('youtu.be') && url.length === 11) {
+        // If it's just the 11-character video ID, use it directly
+        videoId = url;
+      } else {
+        // Not a recognizable YouTube URL or ID
+        console.log("Invalid YouTube URL or ID format");
+        return "Invalid YouTube URL or ID format. Please provide a valid YouTube URL or video ID.";
       }
 
-      console.log("Video ID: " + videoId);
+      if (!videoId) {
+        console.log("Could not extract video ID from URL");
+        return "Could not extract video ID from the provided URL. Please check the URL format.";
+      }
+
+      console.log("Extracted Video ID: " + videoId);
       
       try {
+        // Make sure we're only passing the video ID, not the full URL
         const transcript = await YoutubeTranscript.fetchTranscript(videoId);
         
         if (!transcript || transcript.length === 0) {
@@ -68,13 +81,14 @@ export async function POST(request) {
           return "No transcript available for this video. Please provide additional context in your prompt.";
         }
         
-        console.log(transcript.map(item => item.text).join(' '));
+        // For debugging, log a small portion of the transcript
+        console.log("Transcript sample (first 100 chars):", transcript.map(item => item.text).join(' ').substring(0, 100) + "...");
         return transcript.map(item => item.text).join(' ');
       } catch (transcriptError) {
         console.error("Error fetching YouTube transcript:", transcriptError);
         
         // Handle specific error for disabled transcripts
-        if (transcriptError.message.includes("disabled on this video")) {
+        if (transcriptError.message && transcriptError.message.includes("disabled on this video")) {
           return "Transcript is disabled for this video. Please provide additional context about the video content in your prompt.";
         }
         

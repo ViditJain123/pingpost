@@ -5,8 +5,8 @@ import userModel from "@/models/userModel";
 import OpenAI from "openai";
 import { z } from "zod"; 
 import { zodResponseFormat } from "openai/helpers/zod";
-import puppeteer from 'puppeteer';
 
+// Remove direct imports that cause build issues
 
 export async function POST(request) {
   await dbConnect();
@@ -44,18 +44,40 @@ export async function POST(request) {
 
   const fetchArticle = async (url) => {
     try {
-      // Launch Puppeteer with no sandbox (helpful in some hosting environments)
-      const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+      // Dynamically import puppeteer only when this function is called
+      let puppeteer;
+      let browser;
+      
+      if (process.env.NODE_ENV === 'production') {
+        // In production (e.g. Vercel or AWS Lambda)
+        const chromium = await import('chrome-aws-lambda');
+        puppeteer = await import('puppeteer-core');
+        
+        browser = await puppeteer.default.launch({
+          args: chromium.args,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath,
+          headless: true,
+          ignoreHTTPSErrors: true,
+        });
+      } else {
+        // In development
+        puppeteer = await import('puppeteer');
+        browser = await puppeteer.default.launch({
+          headless: "new"
+        });
+      }
+      
       const page = await browser.newPage();
-  
+
       // Navigate to the provided URL and wait until network activity is low
       await page.goto(url, { waitUntil: 'networkidle2' });
-  
-      // Evaluate the page to extract only the plain text from the document body
+
+      // Extract plain text from the document body
       const text = await page.evaluate(() => document.body.innerText);
-  
+
       await browser.close();
-  
+
       return text.trim();
     } catch (error) {
       console.error('Error scraping URL:', error);
@@ -85,12 +107,12 @@ export async function POST(request) {
     const user = await userModel.findOne({ linkedinId });
     const linkedinSpecs = user.linkedinSpecs;
 
-    console.log(title);
-    console.log(linkedinSpecs);
+   // console.log(title);
+  //  console.log(linkedinSpecs);
 
     const userMessage = "Title: " + title + "/n" + "Prompt: " + prompt + "/n" + "Post Examples: " + linkedinSpecs.postExamples + "/n" + "Article: " + articleData;
 
-    console.log(userMessage);
+  //  console.log(userMessage);
 
     const completion = await client.chat.completions.create({
       model: "gpt-4o",
@@ -108,17 +130,17 @@ export async function POST(request) {
     });
 
     const response = completion.choices[0].message;
-    console.log(response);
+   // console.log(response);
 
     const parsedContent = JSON.parse(response.content);
-    console.log(parsedContent);
+  //  console.log(parsedContent);
     
     const post = parsedContent.post;
     const googleSearchQuery = parsedContent.googleSearchQuery;
     
     console.log(googleSearchQuery);
     const imageUrls = await googleSearch(googleSearchQuery);
-    console.log(imageUrls);
+ //   console.log(imageUrls);
 
     return NextResponse.json(
       {
