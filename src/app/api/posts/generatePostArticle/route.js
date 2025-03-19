@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import userModel from "@/models/userModel";
 import OpenAI from "openai";
-import { z } from "zod"; 
+import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
 
 // Remove direct imports that cause build issues
@@ -23,10 +23,10 @@ export async function POST(request) {
     const search_engine_id = process.env.SEARCH_ENGINE_ID;
 
     const url = `https://www.googleapis.com/customsearch/v1?` +
-              `key=${api_key}` +
-              `&cx=${search_engine_id}` +
-              `&q=${encodeURIComponent(query)}` +
-              `&searchType=image`;
+      `key=${api_key}` +
+      `&cx=${search_engine_id}` +
+      `&q=${encodeURIComponent(query)}` +
+      `&searchType=image`;
 
     try {
       const response = await fetch(url);
@@ -47,20 +47,20 @@ export async function POST(request) {
       // Dynamically import puppeteer only when this function is called
       let puppeteer;
       let browser;
-      
+
       if (process.env.NODE_ENV === 'production') {
         // In production (e.g. Vercel or AWS Lambda)
         const chromium = await import('@sparticuz/chromium');
         puppeteer = await import('puppeteer-core');
-        
-        const browser = await puppeteer.launch({
+
+        browser = await puppeteer.default.launch({
           args: chromium.args,
           defaultViewport: chromium.defaultViewport,
           executablePath: await chromium.executablePath(),
           headless: chromium.headless,
           ignoreHTTPSErrors: true,
+
         });
-      
       } else {
         // In development
         puppeteer = await import('puppeteer');
@@ -68,7 +68,7 @@ export async function POST(request) {
           headless: "new"
         });
       }
-      
+
       const page = await browser.newPage();
 
       // Navigate to the provided URL and wait until network activity is low
@@ -101,19 +101,19 @@ export async function POST(request) {
     const linkedinId = linkedinProfile.linkedinId;
 
     const { title, prompt, articleUrl } = await request.json();
-    
+
     const articleData = await fetchArticle(articleUrl);
     console.log(articleData);
 
     const user = await userModel.findOne({ linkedinId });
     const linkedinSpecs = user.linkedinSpecs;
 
-   // console.log(title);
-  //  console.log(linkedinSpecs);
+    // console.log(title);
+    //  console.log(linkedinSpecs);
 
     const userMessage = "Title: " + title + "/n" + "Prompt: " + prompt + "/n" + "Post Examples: " + linkedinSpecs.postExamples + "/n" + "Article: " + articleData;
 
-  //  console.log(userMessage);
+    //  console.log(userMessage);
 
     const completion = await client.chat.completions.create({
       model: "gpt-4o",
@@ -131,23 +131,23 @@ export async function POST(request) {
     });
 
     const response = completion.choices[0].message;
-   // console.log(response);
+    // console.log(response);
 
     const parsedContent = JSON.parse(response.content);
-  //  console.log(parsedContent);
-    
+    //  console.log(parsedContent);
+
     const post = parsedContent.post;
     const googleSearchQuery = parsedContent.googleSearchQuery;
-    
+
     console.log(googleSearchQuery);
     const imageUrls = await googleSearch(googleSearchQuery);
- //   console.log(imageUrls);
+    //   console.log(imageUrls);
 
     return NextResponse.json(
       {
         message: "Post generated successfully",
         post,
-        googleSearchQuery, 
+        googleSearchQuery,
         images: imageUrls
       },
       { status: 200 }
