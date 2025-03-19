@@ -50,13 +50,13 @@ export async function POST(request) {
       
       if (process.env.NODE_ENV === 'production') {
         // In production (e.g. Vercel or AWS Lambda)
-        const chromium = await import('chrome-aws-lambda');
+        const chromium = await import('@sparticuz/chromium');
         puppeteer = await import('puppeteer-core');
         
         browser = await puppeteer.default.launch({
           args: chromium.args,
           defaultViewport: chromium.defaultViewport,
-          executablePath: await chromium.executablePath,
+          executablePath: await chromium.executablePath(),
           headless: true,
           ignoreHTTPSErrors: true,
         });

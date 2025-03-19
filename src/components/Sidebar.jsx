@@ -23,6 +23,7 @@ export default function Sidebar() {
     { id: 'messages', path: '/sidebar/messages.svg', href: '/app/typenoai', label: 'Draft Post' },
     { id: 'article', path: '/sidebar/article.svg', href: '/app/articles', label: 'Draft post from Article' },
     { id: 'youtube', path: '/sidebar/youtube.svg', href: '/app/youtube', label: 'Draft post from YouTube' },
+    { id: 'massScheduler', path: '/sidebar/mass_schedular.svg', href: '/app/mass-scheduler', label: 'Mass Scheduler' },
     { id: 'profile', path: '/sidebar/profile.svg', href: '/app/profile', label: 'Profile' },
   ];
 
