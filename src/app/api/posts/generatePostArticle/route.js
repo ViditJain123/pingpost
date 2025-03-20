@@ -5,8 +5,35 @@ import userModel from "@/models/userModel";
 import OpenAI from "openai";
 import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
+import chromium from "@sparticuz/chromium-min";
+import puppeteerCore from "puppeteer-core";
+import puppeteer from "puppeteer";
 
-// Remove direct imports that cause build issues
+// Set dynamic rendering to force server-side execution each time
+export const dynamic = "force-dynamic";
+
+// Browser instance cache
+let browser;
+
+// Function to get or create a browser instance
+async function getBrowser() {
+  if (browser) return browser;
+
+  if (process.env.NEXT_PUBLIC_VERCEL_ENVIRONMENT === "production") {
+    const remoteExecutablePath = "https://github.com/Sparticuz/chromium/releases/download/v121.0.0/chromium-v121.0.0-pack.tar";
+    browser = await puppeteerCore.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(remoteExecutablePath),
+      headless: true,
+    });
+  } else {
+    browser = await puppeteer.launch({
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      headless: true,
+    });
+  }
+  return browser;
+}
 
 export async function POST(request) {
   await dbConnect();
@@ -44,41 +71,16 @@ export async function POST(request) {
 
   const fetchArticle = async (url) => {
     try {
-      // Dynamically import puppeteer only when this function is called
-      let puppeteer;
-      let browser;
-
-      if (process.env.NODE_ENV === 'production') {
-        // In production (e.g. Vercel or AWS Lambda)
-        const chromium = await import('@sparticuz/chromium');
-        puppeteer = await import('puppeteer-core');
-
-        browser = await puppeteer.default.launch({
-          args: chromium.args,
-          defaultViewport: chromium.defaultViewport,
-          executablePath: await chromium.executablePath(),
-          headless: chromium.headless,
-          ignoreHTTPSErrors: true,
-
-        });
-      } else {
-        // In development
-        puppeteer = await import('puppeteer');
-        browser = await puppeteer.default.launch({
-          headless: "new"
-        });
-      }
-
+      const browser = await getBrowser();
       const page = await browser.newPage();
 
-      // Navigate to the provided URL and wait until network activity is low
-      await page.goto(url, { waitUntil: 'networkidle2' });
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
 
       // Extract plain text from the document body
       const text = await page.evaluate(() => document.body.innerText);
 
-      await browser.close();
-
+      await page.close(); // Close the page but keep the browser instance
+      
       return text.trim();
     } catch (error) {
       console.error('Error scraping URL:', error);
@@ -159,4 +161,43 @@ export async function POST(request) {
       { status: 500 }
     );
   }
+}
+
+// Add a GET endpoint to check page status
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const url = searchParams.get("url");
+  
+  if (!url) {
+    return new Response(
+      JSON.stringify({ error: "URL parameter is required" }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+  
+  let statusCode;
+  try {
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    const response = await page.goto(url, { waitUntil: "domcontentloaded" });
+    statusCode = response && response.status() === 200 ? 200 : 404;
+    await page.close();
+  } catch (error) {
+    console.error("Error accessing page:", error);
+    statusCode = 404;
+  }
+  
+  return new Response(
+    JSON.stringify({
+      statusCode: statusCode === 200 ? 200 : 404,
+      is200: statusCode === 200,
+    }),
+    {
+      status: statusCode === 200 ? 200 : 404,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
 }
