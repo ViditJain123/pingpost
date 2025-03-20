@@ -19,20 +19,43 @@ let browser;
 async function getBrowser() {
   if (browser) return browser;
 
-  if (process.env.NEXT_PUBLIC_VERCEL_ENVIRONMENT === "production") {
-    const remoteExecutablePath = "https://github.com/Sparticuz/chromium/releases/download/v121.0.0/chromium-v121.0.0-pack.tar";
-    browser = await puppeteerCore.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(remoteExecutablePath),
-      headless: true,
-    });
-  } else {
-    browser = await puppeteer.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      headless: true,
-    });
+  try {
+    if (process.env.NEXT_PUBLIC_VERCEL_ENVIRONMENT === "production") {
+      const remoteExecutablePath = "https://github.com/Sparticuz/chromium/releases/download/v121.0.0/chromium-v121.0.0-pack.tar";
+      browser = await puppeteerCore.launch({
+        args: [...chromium.args, '--no-sandbox'],
+        executablePath: await chromium.executablePath(remoteExecutablePath),
+        headless: chromium.headless,
+        ignoreHTTPSErrors: true,
+      });
+    } else {
+      // For development environment, use puppeteer-core with explicitly installed browser
+      try {
+        // Try using puppeteer's built-in browser first
+        browser = await puppeteer.launch({
+          args: ['--no-sandbox', '--disable-setuid-sandbox'],
+          headless: 'new',
+        });
+      } catch (devError) {
+        console.warn("Fallback to puppeteer-core due to error:", devError.message);
+        // Fallback to puppeteer-core with explicit Chrome path
+        browser = await puppeteerCore.launch({
+          args: ['--no-sandbox', '--disable-setuid-sandbox'],
+          executablePath: 
+            process.platform === 'win32'
+              ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+              : process.platform === 'darwin'
+                ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+                : '/usr/bin/google-chrome',
+          headless: 'new',
+        });
+      }
+    }
+    return browser;
+  } catch (error) {
+    console.error("Browser initialization error:", error);
+    throw new Error(`Failed to launch browser: ${error.message}`);
   }
-  return browser;
 }
 
 export async function POST(request) {
@@ -73,18 +96,46 @@ export async function POST(request) {
     try {
       const browser = await getBrowser();
       const page = await browser.newPage();
-
-      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      
+      // Set a reasonable timeout
+      await page.setDefaultNavigationTimeout(30000); 
+      
+      // Try to navigate to the URL
+      const response = await page.goto(url, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 30000
+      });
+      
+      if (!response) {
+        console.warn("No response received from page");
+        await page.close();
+        return "Could not load the article content due to connection issues.";
+      }
+      
+      if (response.status() >= 400) {
+        console.warn(`Page returned status code: ${response.status()}`);
+        await page.close();
+        return `Could not load the article - received status code ${response.status()}`;
+      }
 
       // Extract plain text from the document body
-      const text = await page.evaluate(() => document.body.innerText);
+      const text = await page.evaluate(() => {
+        // Remove script and style elements that might contain code/CSS
+        const scripts = document.querySelectorAll('script, style');
+        scripts.forEach(s => s.remove());
+        
+        // Get main content or fallback to body
+        const main = document.querySelector('main') || document.querySelector('article') || document.body;
+        return main.innerText;
+      });
 
       await page.close(); // Close the page but keep the browser instance
       
-      return text.trim();
+      // Return a reasonable amount of text
+      return text.trim().substring(0, 10000);
     } catch (error) {
       console.error('Error scraping URL:', error);
-      return '';
+      return `Failed to extract article content: ${error.message}`;
     }
   }
 
@@ -179,15 +230,39 @@ export async function GET(request) {
   }
   
   let statusCode;
+  let tempBrowser;
   try {
-    const browser = await getBrowser();
-    const page = await browser.newPage();
-    const response = await page.goto(url, { waitUntil: "domcontentloaded" });
+    // Create a separate browser instance for the GET endpoint to avoid conflicts
+    if (process.env.NEXT_PUBLIC_VERCEL_ENVIRONMENT === "production") {
+      const remoteExecutablePath = "https://github.com/Sparticuz/chromium/releases/download/v121.0.0/chromium-v121.0.0-pack.tar";
+      tempBrowser = await puppeteerCore.launch({
+        args: [...chromium.args, '--no-sandbox'],
+        executablePath: await chromium.executablePath(remoteExecutablePath),
+        headless: true,
+      });
+    } else {
+      tempBrowser = await puppeteer.launch({
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        headless: 'new',
+      });
+    }
+    
+    const page = await tempBrowser.newPage();
+    await page.setDefaultNavigationTimeout(30000);
+    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
     statusCode = response && response.status() === 200 ? 200 : 404;
     await page.close();
+    await tempBrowser.close();
   } catch (error) {
     console.error("Error accessing page:", error);
     statusCode = 404;
+    if (tempBrowser) {
+      try {
+        await tempBrowser.close();
+      } catch (closeError) {
+        console.error("Error closing browser:", closeError);
+      }
+    }
   }
   
   return new Response(
