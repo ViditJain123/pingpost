@@ -38,11 +38,18 @@ export async function POST(request) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      const items = data.items;
-      const imageUrls = items.slice(0, 4).map(item => item.link);
+      
+      // Check if items exist in the response
+      if (!data.items || !Array.isArray(data.items)) {
+        console.log('No items found in Google search response:', data);
+        return []; // Return empty array if no items
+      }
+      
+      const imageUrls = data.items.slice(0, 4).map(item => item.link);
       return imageUrls;
     } catch (err) {
-      console.error(err);
+      console.error('Google search error:', err);
+      return []; // Return empty array on error
     }
   };
 
@@ -72,9 +79,8 @@ export async function POST(request) {
         // Remove script and style elements to avoid getting their content
         const scripts = document.querySelectorAll('script, style, noscript');
         scripts.forEach(script => script.remove());
-        
-        // Get all text from the body
         return document.body.innerText;
+        console.log(document.body.innerText);
       });
       
       await browser.close();
