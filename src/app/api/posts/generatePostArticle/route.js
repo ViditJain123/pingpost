@@ -84,6 +84,7 @@ export async function POST(request) {
       });
       
       await browser.close();
+      console.log(articleText);
       return articleText;
     } catch (error) {
       console.error('Error fetching article:', error);
