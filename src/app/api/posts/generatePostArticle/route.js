@@ -23,32 +23,27 @@ async function getBrowser() {
     if (process.env.NEXT_PUBLIC_VERCEL_ENVIRONMENT === "production") {
       browser = await puppeteerCore.launch({
         args: chromium.args,
-        executablePath: await chromium.executablePath(remoteExecutablePath),
-        headless: true,
+        executablePath: await chromium.executablePath() || remoteExecutablePath,  // Ensure chromium binary is used
+        headless: chromium.headless,
       });
     } else {
-      browser = await puppeteer.launch({
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        headless: true,
-      });
       try {
-        // Try using puppeteer's built-in browser first
+        // Local development
         browser = await puppeteer.launch({
-          args: ['--no-sandbox', '--disable-setuid-sandbox'],
-          headless: 'new',
+          args: ["--no-sandbox", "--disable-setuid-sandbox"],
+          headless: "new",
         });
       } catch (devError) {
         console.warn("Fallback to puppeteer-core due to error:", devError.message);
-        // Fallback to puppeteer-core with explicit Chrome path
         browser = await puppeteerCore.launch({
-          args: ['--no-sandbox', '--disable-setuid-sandbox'],
+          args: ["--no-sandbox", "--disable-setuid-sandbox"],
           executablePath:
-            process.platform === 'win32'
-              ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-              : process.platform === 'darwin'
-                ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-                : '/usr/bin/google-chrome',
-          headless: 'new',
+            process.platform === "win32"
+              ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+              : process.platform === "darwin"
+              ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+              : "/usr/bin/google-chrome",
+          headless: "new",
         });
       }
     }
