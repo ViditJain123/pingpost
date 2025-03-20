@@ -12,24 +12,25 @@ import puppeteer from "puppeteer";
 // Set dynamic rendering to force server-side execution each time
 export const dynamic = "force-dynamic";
 
-// Browser instance cache
+const remoteExecutablePath = "https://github.com/Sparticuz/chromium/releases/download/v121.0.0/chromium-v121.0.0-pack.tar";
+
 let browser;
 
-// Function to get or create a browser instance
 async function getBrowser() {
   if (browser) return browser;
 
   try {
     if (process.env.NEXT_PUBLIC_VERCEL_ENVIRONMENT === "production") {
-      const remoteExecutablePath = "https://github.com/Sparticuz/chromium/releases/download/v121.0.0/chromium-v121.0.0-pack.tar";
       browser = await puppeteerCore.launch({
-        args: [...chromium.args, '--no-sandbox'],
+        args: chromium.args,
         executablePath: await chromium.executablePath(remoteExecutablePath),
-        headless: chromium.headless,
-        ignoreHTTPSErrors: true,
+        headless: true,
       });
     } else {
-      // For development environment, use puppeteer-core with explicitly installed browser
+      browser = await puppeteer.launch({
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        headless: true,
+      });
       try {
         // Try using puppeteer's built-in browser first
         browser = await puppeteer.launch({
@@ -41,7 +42,7 @@ async function getBrowser() {
         // Fallback to puppeteer-core with explicit Chrome path
         browser = await puppeteerCore.launch({
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
-          executablePath: 
+          executablePath:
             process.platform === 'win32'
               ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
               : process.platform === 'darwin'
@@ -96,22 +97,22 @@ export async function POST(request) {
     try {
       const browser = await getBrowser();
       const page = await browser.newPage();
-      
+
       // Set a reasonable timeout
-      await page.setDefaultNavigationTimeout(30000); 
-      
+      await page.setDefaultNavigationTimeout(30000);
+
       // Try to navigate to the URL
-      const response = await page.goto(url, { 
+      const response = await page.goto(url, {
         waitUntil: 'domcontentloaded',
         timeout: 30000
       });
-      
+
       if (!response) {
         console.warn("No response received from page");
         await page.close();
         return "Could not load the article content due to connection issues.";
       }
-      
+
       if (response.status() >= 400) {
         console.warn(`Page returned status code: ${response.status()}`);
         await page.close();
@@ -123,14 +124,14 @@ export async function POST(request) {
         // Remove script and style elements that might contain code/CSS
         const scripts = document.querySelectorAll('script, style');
         scripts.forEach(s => s.remove());
-        
+
         // Get main content or fallback to body
         const main = document.querySelector('main') || document.querySelector('article') || document.body;
         return main.innerText;
       });
 
       await page.close(); // Close the page but keep the browser instance
-      
+
       // Return a reasonable amount of text
       return text.trim().substring(0, 10000);
     } catch (error) {
@@ -212,67 +213,4 @@ export async function POST(request) {
       { status: 500 }
     );
   }
-}
-
-// Add a GET endpoint to check page status
-export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const url = searchParams.get("url");
-  
-  if (!url) {
-    return new Response(
-      JSON.stringify({ error: "URL parameter is required" }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-  }
-  
-  let statusCode;
-  let tempBrowser;
-  try {
-    // Create a separate browser instance for the GET endpoint to avoid conflicts
-    if (process.env.NEXT_PUBLIC_VERCEL_ENVIRONMENT === "production") {
-      const remoteExecutablePath = "https://github.com/Sparticuz/chromium/releases/download/v121.0.0/chromium-v121.0.0-pack.tar";
-      tempBrowser = await puppeteerCore.launch({
-        args: [...chromium.args, '--no-sandbox'],
-        executablePath: await chromium.executablePath(remoteExecutablePath),
-        headless: true,
-      });
-    } else {
-      tempBrowser = await puppeteer.launch({
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        headless: 'new',
-      });
-    }
-    
-    const page = await tempBrowser.newPage();
-    await page.setDefaultNavigationTimeout(30000);
-    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-    statusCode = response && response.status() === 200 ? 200 : 404;
-    await page.close();
-    await tempBrowser.close();
-  } catch (error) {
-    console.error("Error accessing page:", error);
-    statusCode = 404;
-    if (tempBrowser) {
-      try {
-        await tempBrowser.close();
-      } catch (closeError) {
-        console.error("Error closing browser:", closeError);
-      }
-    }
-  }
-  
-  return new Response(
-    JSON.stringify({
-      statusCode: statusCode === 200 ? 200 : 404,
-      is200: statusCode === 200,
-    }),
-    {
-      status: statusCode === 200 ? 200 : 404,
-      headers: { "Content-Type": "application/json" },
-    }
-  );
 }
