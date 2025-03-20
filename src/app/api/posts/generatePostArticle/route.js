@@ -5,54 +5,12 @@ import userModel from "@/models/userModel";
 import OpenAI from "openai";
 import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
-import chromium from "@sparticuz/chromium-min";
-import puppeteerCore from "puppeteer-core";
-import puppeteer from "puppeteer";
+import puppeteer from 'puppeteer';
+import puppeteerCore from 'puppeteer-core';
+import chromium from '@sparticuz/chromium-min';
 
-// Set dynamic rendering to force server-side execution each time
-export const dynamic = "force-dynamic";
-
-const remoteExecutablePath = "https://github.com/Sparticuz/chromium/releases/download/v121.0.0/chromium-v121.0.0-pack.tar";
-
-let browser;
-
-async function getBrowser() {
-  if (browser) return browser;
-
-  try {
-    if (process.env.NEXT_PUBLIC_VERCEL_ENVIRONMENT === "production") {
-      browser = await puppeteerCore.launch({
-        args: chromium.args,
-        executablePath: await chromium.executablePath() || remoteExecutablePath,  // Ensure chromium binary is used
-        headless: chromium.headless,
-      });
-    } else {
-      try {
-        // Local development
-        browser = await puppeteer.launch({
-          args: ["--no-sandbox", "--disable-setuid-sandbox"],
-          headless: "new",
-        });
-      } catch (devError) {
-        console.warn("Fallback to puppeteer-core due to error:", devError.message);
-        browser = await puppeteerCore.launch({
-          args: ["--no-sandbox", "--disable-setuid-sandbox"],
-          executablePath:
-            process.platform === "win32"
-              ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-              : process.platform === "darwin"
-              ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-              : "/usr/bin/google-chrome",
-          headless: "new",
-        });
-      }
-    }
-    return browser;
-  } catch (error) {
-    console.error("Browser initialization error:", error);
-    throw new Error(`Failed to launch browser: ${error.message}`);
-  }
-}
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function POST(request) {
   await dbConnect();
@@ -90,48 +48,40 @@ export async function POST(request) {
 
   const fetchArticle = async (url) => {
     try {
-      const browser = await getBrowser();
+      let browser;
+      if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
+        const executablePath = await chromium.executablePath('https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar')
+        browser = await puppeteerCore.launch({
+            executablePath,
+            args: chromium.args,
+            headless: chromium.headless,
+            defaultViewport: chromium.defaultViewport
+        });
+      } else {
+        browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+      }
+
       const page = await browser.newPage();
-
-      // Set a reasonable timeout
-      await page.setDefaultNavigationTimeout(30000);
-
-      // Try to navigate to the URL
-      const response = await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeout: 30000
+      await page.goto(url, { waitUntil: 'networkidle0' });
+      
+      // Extract all text content from the page
+      const articleText = await page.evaluate(() => {
+        // Remove script and style elements to avoid getting their content
+        const scripts = document.querySelectorAll('script, style, noscript');
+        scripts.forEach(script => script.remove());
+        
+        // Get all text from the body
+        return document.body.innerText;
       });
-
-      if (!response) {
-        console.warn("No response received from page");
-        await page.close();
-        return "Could not load the article content due to connection issues.";
-      }
-
-      if (response.status() >= 400) {
-        console.warn(`Page returned status code: ${response.status()}`);
-        await page.close();
-        return `Could not load the article - received status code ${response.status()}`;
-      }
-
-      // Extract plain text from the document body
-      const text = await page.evaluate(() => {
-        // Remove script and style elements that might contain code/CSS
-        const scripts = document.querySelectorAll('script, style');
-        scripts.forEach(s => s.remove());
-
-        // Get main content or fallback to body
-        const main = document.querySelector('main') || document.querySelector('article') || document.body;
-        return main.innerText;
-      });
-
-      await page.close(); // Close the page but keep the browser instance
-
-      // Return a reasonable amount of text
-      return text.trim().substring(0, 10000);
+      
+      await browser.close();
+      return articleText;
     } catch (error) {
-      console.error('Error scraping URL:', error);
-      return `Failed to extract article content: ${error.message}`;
+      console.error('Error fetching article:', error);
+      return 'Failed to extract article content';
     }
   }
 
