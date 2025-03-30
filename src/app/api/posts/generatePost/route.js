@@ -91,7 +91,7 @@ export async function POST(request) {
         message: "Post generated successfully", 
         post, 
         googleSearchQuery, 
-        images: imageUrls // Changed from imageUrls to images to match the front-end expectation
+        images: imageUrls
       },
       { status: 200 }
     );
