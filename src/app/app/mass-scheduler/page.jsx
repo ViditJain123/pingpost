@@ -11,13 +11,17 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 function MassScheduler() {
+  const router = useRouter();
   const [titles, setTitles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [randomCount, setRandomCount] = useState("5");
   const [selectedTitles, setSelectedTitles] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     checkTitleStatus();
@@ -30,10 +34,8 @@ function MassScheduler() {
       const data = await response.json();
 
       if (data.success) {
-        // Titles exist, fetch them
         await getTitles();
       } else {
-        // No titles exist, generate them
         await generateTitles();
       }
     } catch (err) {
@@ -51,7 +53,6 @@ function MassScheduler() {
       
       if (response.ok) {
         setTitles(data.titles || []);
-        // Initialize selected titles array based on titleStatus
         const initialSelected = (data.titles || [])
           .filter(title => title.titleStatus === "selected")
           .map(title => title.title);
@@ -71,11 +72,15 @@ function MassScheduler() {
 
   const generateTitles = async () => {
     try {
-      const response = await fetch('/api/posts/massSchedular/generateTitles/generateTitles');
+      setRefreshing(true);
+      setLoading(true); // Add this line to show the loading screen
+      const response = await fetch('/api/posts/massSchedular/generateTitles');
       const data = await response.json();
       
       if (response.ok) {
         setTitles(data.titles || []);
+        setSelectedTitles([]);
+        toast.success("Titles refreshed successfully");
       } else {
         setError("Failed to generate titles");
         toast.error("Failed to generate titles");
@@ -86,6 +91,7 @@ function MassScheduler() {
       toast.error("Failed to generate titles");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -101,21 +107,14 @@ function MassScheduler() {
 
   const handleRandomSelection = () => {
     const count = parseInt(randomCount, 10);
-    
-    // First clear all selections
     setSelectedTitles([]);
-    
-    // Create a copy of all titles
     const availableTitles = [...titles];
     const selected = [];
-    
-    // Select random titles
     for (let i = 0; i < Math.min(count, availableTitles.length); i++) {
       const randomIndex = Math.floor(Math.random() * availableTitles.length);
       const selectedTitle = availableTitles.splice(randomIndex, 1)[0].title;
       selected.push(selectedTitle);
     }
-    
     setSelectedTitles(selected);
   };  
 
@@ -130,7 +129,8 @@ function MassScheduler() {
     }
     
     try {
-      // First save the selected titles to the database
+      setSubmitting(true);
+      console.log("Saving selected titles:", selectedTitles);
       const response = await fetch('/api/posts/massSchedular/setTitles', {
         method: 'POST',
         headers: {
@@ -140,17 +140,21 @@ function MassScheduler() {
       });
       
       const data = await response.json();
+      console.log("Response from setTitles:", data);
       
       if (data.success) {
         toast.success(`Starting generation with ${selectedTitles.length} selected titles`);
-        // Here you would add logic to proceed to the next step
-        console.log("Selected titles:", selectedTitles);
+        setTimeout(() => {
+          router.push('/app/mass-scheduler/start-generating');
+        }, 500);
       } else {
         toast.error(data.message || "Failed to save selected titles");
       }
     } catch (error) {
       console.error("Error saving selected titles:", error);
       toast.error("Failed to save selected titles. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -239,7 +243,7 @@ function MassScheduler() {
                   style={{
                     background: 'linear-gradient(135deg, #da44ff 0%, #8b5cf6 100%)',
                     borderRadius: 'inherit',
-                    margin: '-3px', // Increased border thickness
+                    margin: '-3px',
                     transition: 'all 0.2s ease-in-out'
                   }}
                 />
@@ -252,7 +256,6 @@ function MassScheduler() {
                     ? "ring-1 ring-purple-400" 
                     : ""
                 }`}
-                // Remove gradient background from checkbox, keep default styling
                 style={isSelected ? {
                   borderColor: '#da44ff',
                 } : {}}
@@ -263,11 +266,36 @@ function MassScheduler() {
         })}
       </div>
       
-      <div className="flex justify-end mt-auto mb-4">
+      <div className="flex justify-between mt-auto mb-4">
+        <Button 
+          onClick={generateTitles} 
+          disabled={refreshing}
+          className={`relative transition-all duration-200 ${refreshing ? 'opacity-60' : ''}`}
+          style={{
+            borderRadius: '12px',
+            position: 'relative',
+            padding: '0.5rem 1.25rem',
+            boxShadow: '0 0 0 2px transparent',
+            backgroundColor: 'white',
+            border: '2px solid #e2e8f0',
+            zIndex: 20,
+            cursor: refreshing ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {refreshing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Refreshing...
+            </>
+          ) : (
+            "Refresh Titles"
+          )}
+        </Button>
+        
         <Button 
           onClick={handleStartGenerating} 
-          disabled={selectedTitles.length === 0}
-          className={`relative transition-all duration-200 ${selectedTitles.length === 0 ? 'opacity-60' : 'bg-white hover:bg-white'}`}
+          disabled={selectedTitles.length === 0 || submitting}
+          className={`relative transition-all duration-200 ${selectedTitles.length === 0 || submitting ? 'opacity-60' : 'bg-white hover:bg-white'}`}
           style={{
             borderRadius: '12px',
             position: 'relative',
@@ -276,11 +304,18 @@ function MassScheduler() {
             background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, #da44ff 0%, #8b5cf6 100%) border-box',
             border: '2px solid transparent',
             zIndex: 20,
-            cursor: selectedTitles.length === 0 ? 'not-allowed' : 'pointer',
-            pointerEvents: 'auto' // Ensures the button can receive click events
+            cursor: selectedTitles.length === 0 || submitting ? 'not-allowed' : 'pointer',
+            pointerEvents: 'auto'
           }}
         >
-          Start Generating
+          {submitting ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Start Generating"
+          )}
         </Button>
       </div>
     </div>

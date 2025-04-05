@@ -25,7 +25,7 @@ const titles = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["rejected", "ingame"],
+        enum: ["rejected", "ingame","inprocess"],
         default: "ingame",
         required: true
     }

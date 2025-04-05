@@ -11,6 +11,13 @@ export default function Sidebar() {
   const [hoveredIcon, setHoveredIcon] = useState(null);
 
   useEffect(() => {
+    // Check for nested routes first
+    if (pathname.startsWith('/app/mass-scheduler')) {
+      setSelected('massScheduler');
+      return;
+    }
+    
+    // For other routes, continue with the original logic
     const path = pathname.split('/').pop();
     const matchingIcon = icons.find(icon => icon.href.includes(`/${path}`));
     if (matchingIcon) {

@@ -35,6 +35,16 @@ export async function GET(request) {
     const count = 30;
 
     const user = await userModel.findOne({ linkedinId });
+    
+    // Find existing titles and update their status to rejected
+    const existingTitlesDoc = await Titles.findOne({ linkedinId });
+    if (existingTitlesDoc) {
+      await Titles.updateOne(
+        { linkedinId },
+        { status: "rejected" }
+      );
+    }
+    
     const linkedinSpecs = user.linkedinSpecs;
 
     const userMessage = `Number of titles: ${count}\nUser's LinkedIn profile: ${linkedinSpecs.headline}\nIndustry: ${linkedinSpecs.industry}`;
@@ -67,7 +77,11 @@ export async function GET(request) {
       // Save titles to database with the new structure
       await Titles.findOneAndUpdate(
         { linkedinId },
-        { linkedinId, titles: formattedTitles },
+        { 
+          linkedinId, 
+          titles: formattedTitles,
+          status: "ingame" // Ensure the new document has the default status
+        },
         { upsert: true, new: true }
       );
 

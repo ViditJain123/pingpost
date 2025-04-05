@@ -52,7 +52,6 @@ const postSchema = new mongoose.Schema({
     }
 });
 
-// Add a pre-save hook to validate scheduled posts
 postSchema.pre('save', function(next) {
     if (this.postStatus === 'scheduled' && this.postSpecificSchedule === true) {
         if (!this.scheduleTime) {
