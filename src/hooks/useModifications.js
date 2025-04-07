@@ -14,10 +14,21 @@ const useModifications = (initialCount = 4) => {
     }
   };
 
+  const decrementModifications = () => {
+    if (remainingModifications > 0) {
+      setRemainingModifications(remainingModifications - 1);
+    }
+    
+    if (remainingModifications <= 1) {
+      setShowExtraCreditsMessage(true);
+    }
+  };
+
   return {
     remainingModifications,
     showExtraCreditsMessage,
-    handleModifyClick
+    handleModifyClick,
+    decrementModifications
   };
 };
 
