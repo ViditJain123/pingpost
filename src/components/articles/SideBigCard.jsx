@@ -6,6 +6,7 @@ import useAudioRecording from '../../hooks/useAudioRecording';
 import useModifications from '../../hooks/useModifications';
 import useDraftPost from '../../hooks/useDraftPost';
 import useGeneratePostFromArticle from '../../hooks/useGeneratePostFromArticle';
+import useModifyPost from '../../hooks/useModifyPost'; // Add this import
 import usePublishPost from '../../hooks/usePublishPost';
 import PreviewModal from './PreviewModal';
 
@@ -27,6 +28,7 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
   const [errorMessage, setErrorMessage] = useState('');
   const [apiImageUrls, setApiImageUrls] = useState([]);
   const [postStatus, setPostStatus] = useState(null); // 'posting', 'success', 'error'
+  const [currentPostId, setCurrentPostId] = useState(null); // Add this state for tracking post ID
 
   const [imageSourceMap, setImageSourceMap] = useState({});
 
@@ -34,6 +36,7 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
   const { saveDraft, isSaving, saveSuccess, saveError } = useDraftPost();
   const { publishPost, isPublishing, publishSuccess, publishError } = usePublishPost();
   const { generatePost, isGenerating, error: generateError } = useGeneratePostFromArticle();
+  const { modifyPost, isModifying, modifyError } = useModifyPost(); // Add this hook
   
   useEffect(() => {
     if (generateError) {
@@ -42,6 +45,15 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
       return () => clearTimeout(timer);
     }
   }, [generateError]);
+
+  // Add useEffect for modifyError
+  useEffect(() => {
+    if (modifyError) {
+      setErrorMessage(modifyError);
+      const timer = setTimeout(() => setErrorMessage(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [modifyError]);
 
   const handleTranscriptionComplete = (text) => {
     setAiModificationText(prevText => {
@@ -165,6 +177,11 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
           console.log("Updating post content:", result.post);
           onUpdatePostContent(result.post);
           
+          // Store the post ID for future modifications
+          if (result._id) {
+            setCurrentPostId(result._id);
+          }
+          
           if (result.images && Array.isArray(result.images) && result.images.length > 0) {
             console.log("Setting API images:", result.images);
             const imagesToShow = result.images.slice(0, 4);
@@ -190,25 +207,25 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
     } else {
       decrementModifications();
       try {
-        console.log("Modifying post with:", { title, aiModificationText, articleUrl });
-        const result = await generatePost(title, aiModificationText, articleUrl);
+        console.log("Modifying post with:", { title, prompt: aiModificationText });
+        
+        // Use modifyPost instead of generatePost for modifications
+        const result = await modifyPost(title, aiModificationText);
         console.log("Modification result:", result);
         
         if (result) {
-          console.log("Updating post content:", result.post);
-          onUpdatePostContent(result.post);
+          console.log("Updating post content:", result.content);
+          onUpdatePostContent(result.content);
           
+          // If the API returns images, handle them
           if (result.images && Array.isArray(result.images) && result.images.length > 0) {
             console.log("Setting API images:", result.images);
             const imagesToShow = result.images.slice(0, 4);
             setApiImageUrls(prevUrls => {
               // Only add images that don't already exist in the source map
               const newImageUrls = imagesToShow.filter(url => !imageSourceMap[url]);
-              return [...prevUrls, ...newImageUrls].slice(0, 4); // Keep max 4 images in apiImageUrls
+              return [...prevUrls, ...newImageUrls].slice(0, 4);
             });
-          } else {
-            console.warn("No valid images returned from API");
-            setApiImageUrls([]);
           }
           
           setAiModificationText('');

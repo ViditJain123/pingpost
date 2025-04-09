@@ -29,6 +29,39 @@ const linkedinSpecs = new mongoose.Schema({
     }
 });
 
+const subscription = new mongoose.Schema({
+    status: {
+        type: String,
+        enum: ["active", "inactive"],
+        required: true,
+    }, 
+    plan: {
+        type: String,
+        enum: ["free", "freeTrial", "premiumMonthly", "premiumYearly"],
+        required: true,
+        default: "free"
+    },
+    startDate: {
+        type: Date,
+        required: true,
+        default: Date.now
+    },
+    endDate: {
+        type: Date,
+        required: true,
+    },
+    cashFreeSubscriptionId: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    cashFreeCustomerId: {
+        type: String,
+        required: true,
+        unique: true
+    },
+});
+
 const userSchema = new mongoose.Schema({
     linkedinId: {
         type: String,
@@ -64,9 +97,8 @@ const userSchema = new mongoose.Schema({
         required: false
     },
     subscription: {
-        type: Number,
-        required: true,
-        default: 0
+        type: subscription,
+        required: false,
     }
 });
 
