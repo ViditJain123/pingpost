@@ -66,9 +66,6 @@ export async function POST(req) {
         const randomString = Math.random().toString(36).substring(2, 10);
         const subscriptionId = `sub${linkedinId.substring(0, 5)}${randomString}`;
         
-        // Create a unique customer ID with alphanumeric characters only
-        const customerId = `cust${linkedinId.substring(0, 5)}${randomString}`;
-        
         // Cashfree API credentials - using sandbox credentials for testing
         const appId = process.env.CASHFREE_APP_ID || "TEST94330432fc55c8570e96cf62a140334"; // Fallback to test ID
         const secretKey = process.env.CASHFREE_SECRET_KEY || "TEST71ef88e5412390b0d0c786a427a44652d414b940"; // Fallback to test key
@@ -84,50 +81,45 @@ export async function POST(req) {
             endDate.setFullYear(endDate.getFullYear() + 1);
         }
 
-        // Format dates in the required format (YYYY-MM-DD)
-        const formattedStartDate = startDate.toISOString().split('T')[0];
-        // Use a more reasonable expiry time for testing (7 days instead of a year in the future)
+        // Format expiry date for subscription (YYYY-MM-DD HH:MM:SS)
         const formattedExpiryDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000)
-            .toISOString().split('T')[0] + 'T23:59:59Z';
+            .toISOString().replace('T', ' ').slice(0, 19);
 
-        console.log("Creating payment link with the following data:");
+        console.log("Creating subscription with the following data:");
+        
+        // Return URL for subscription flow
+        const returnUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/subscription/status`;
         
         const requestBody = {
-            link_id: subscriptionId,
-            link_amount: selectedPlan.amount,
-            link_currency: "INR",
-            link_purpose: selectedPlan.description,
-            customer_details: {
-                customer_id: customerId,
-                customer_name: `${user.firstName} ${user.lastName}`,
-                customer_email: user.email,
-                customer_phone: "9876543210" // Adding default phone number as required by Cashfree API
+            subscriptionId: subscriptionId,
+            customerName: `${user.firstName} ${user.lastName}`,
+            customerPhone: "9876543210", // Default phone number
+            customerEmail: user.email,
+            returnUrl: returnUrl,
+            authAmount: 1, // Authentication amount for subscription verification
+            expiresOn: formattedExpiryDate,
+            planInfo: {
+                type: "PERIODIC",
+                planName: selectedPlan.planName,
+                amount: selectedPlan.amount,
+                interval: selectedPlan.interval,
+                intervalType: selectedPlan.intervalType.toUpperCase(), // MONTH or YEAR
+                mandateAmount: selectedPlan.amount, // Updated to match recurring amount
+                recurringAmount: selectedPlan.amount
             },
-            link_meta: {
-                plan_type: planType,
-                user_id: linkedinId
-            },
-            link_notify: {
-                send_email: true
-            },
-            link_notes: {
-                subscription_type: selectedPlan.planName
-            },
-            link_auto_reminders: true,
-            link_expiry_time: formattedExpiryDate,
-            link_partial_payments: false
+            notificationChannels: ["EMAIL"],
+            remarks: `${planType} subscription for ${user.email}`
         };
         
         console.log(JSON.stringify(requestBody, null, 2));
 
-        // Update to use the production API endpoint with explicit credentials
-        const response = await fetch("https://api.cashfree.com/pg/links", {
+        // Update to use the subscription API endpoint with proper header case
+        const response = await fetch("https://api.cashfree.com/api/v2/subscriptions/nonSeamless/subscription", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "x-api-version": "2022-09-01",
-                "x-client-id": appId,
-                "x-client-secret": secretKey,
+                "X-Client-Id": appId,
+                "X-Client-Secret": secretKey,
             },
             body: JSON.stringify(requestBody),
         });
@@ -137,7 +129,7 @@ export async function POST(req) {
             responseText = await response.text();
             console.log("API Response Text:", responseText);
             
-            // Save response for debugging
+            // Parse response
             let data = {};
             try {
                 data = JSON.parse(responseText);
@@ -158,7 +150,7 @@ export async function POST(req) {
                 return NextResponse.json(
                     { 
                         success: false, 
-                        message: "Failed to create payment with Cashfree", 
+                        message: "Failed to create subscription with Cashfree", 
                         statusCode: response.status,
                         details: data 
                     },
@@ -166,23 +158,23 @@ export async function POST(req) {
                 );
             }
 
-            // Save subscription details (will be updated to "active" after payment confirmation)
+            // Save subscription details in user model
             user.subscription = {
-                status: "inactive",
+                status: "pending",
                 plan: selectedPlan.planName,
                 startDate: startDate,
                 endDate: endDate,
-                cashFreeSubscriptionId: subscriptionId,
-                cashFreeCustomerId: customerId
+                subscriptionId: subscriptionId,
+                subscriptionLink: data.subscriptionLink || data.paymentLink // Different response format in subscription API
             };
             
             await user.save();
 
             return NextResponse.json({
                 success: true,
-                subscriptionLink: data.link_url,
+                subscriptionLink: data.subscriptionLink || data.paymentLink,
                 subscriptionId: subscriptionId,
-                message: "Payment link created. Please complete the payment process."
+                message: "Subscription created. Please complete the authentication process."
             });
             
         } catch (err) {
