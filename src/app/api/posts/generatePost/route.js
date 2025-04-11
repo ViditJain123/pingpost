@@ -87,6 +87,8 @@ The post should have a feel like you are talking to a friend but still maintain 
 - If referencing failures or lessons learned, keep it conversational and real. 
 - The overall style should sound fresh, personal, “no BS,” and reflect the user’s voice as seen in their “post examples.”
 
+Also - Donnot use ** to highlight any words as we can't use it in linkedin post. It has to be plain text.
+
 **Output**:
 Return valid JSON matching the schema: 
 {
