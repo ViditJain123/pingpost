@@ -12,56 +12,27 @@ export async function middleware(request) {
     }
 
     // Redirect to login page if not logged in
-    if (!profile && (path.startsWith('/onboard') || path.startsWith('/app/home'))) {
+    if (!profile && (path.startsWith('/onboard') || path.startsWith('/app/'))) {
         return NextResponse.redirect(new URL('/', request.url));
     }
 
-    // Unrestricted pages that don't require subscription check
-    const unrestrictedPages = ['/', '/app/home', '/app/typenoai', '/app/profile', '/onboard'];
-    if (unrestrictedPages.some(page => path === page || path.startsWith(page + '/'))) {
-        // For these pages, only check if user data exists but don't check subscription
-        if (path.startsWith('/app/home') && profile) {
-            try {
-                const response = await fetch(new URL('/api/onboard/getUserData', request.url), {
-                    headers: {
-                        Cookie: `linkedin_profile=${profile.value}`
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (data.status === 404 || (data.body && !data.body.linkedinSpecs)) {
-                    return NextResponse.redirect(new URL('/onboard', request.url));
-                }
-            } catch (error) {
-                console.error("Error checking user data:", error);
-                return NextResponse.redirect(new URL('/onboard', request.url));
-            }
-        }
-        
-        return NextResponse.next();
-    }
-
-    // For all other pages, check subscription status
-    if (profile) {
+    // Check if user has completed onboarding
+    if (path.startsWith('/app/') && profile) {
         try {
-            // Check subscription status
-            const subscriptionResponse = await fetch(new URL('/api/subscription/subscriptionStatus', request.url), {
+            const response = await fetch(new URL('/api/onboard/getUserData', request.url), {
                 headers: {
                     Cookie: `linkedin_profile=${profile.value}`
                 }
             });
             
-            const subscriptionData = await subscriptionResponse.json();
+            const data = await response.json();
             
-            // If no active subscription, redirect to home page
-            if (!subscriptionData.hasActiveSubscription) {
-                return NextResponse.redirect(new URL('/app/home', request.url));
+            if (data.status === 404 || (data.body && !data.body.linkedinSpecs)) {
+                return NextResponse.redirect(new URL('/onboard', request.url));
             }
         } catch (error) {
-            console.error("Error checking subscription status:", error);
-            // On error, default to restricting access
-            return NextResponse.redirect(new URL('/app/home', request.url));
+            console.error("Error checking user data:", error);
+            return NextResponse.redirect(new URL('/onboard', request.url));
         }
     }
 

@@ -193,6 +193,8 @@ Make sure your JSON is well-formed (no extra keys, no trailing commas). If any d
     console.log(parsedContent);
 
     const post = parsedContent.post;
+    // Remove all double stars from the post
+    const cleanedPost = post.replace(/\*\*/g, '');
     const googleSearchQuery = parsedContent.googleSearchQuery;
 
     console.log(googleSearchQuery);
@@ -202,7 +204,7 @@ Make sure your JSON is well-formed (no extra keys, no trailing commas). If any d
     return NextResponse.json(
       {
         message: "Post generated successfully",
-        post,
+        post: cleanedPost,
         googleSearchQuery,
         images: imageUrls
       },
