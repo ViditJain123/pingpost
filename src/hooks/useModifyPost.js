@@ -4,7 +4,7 @@ const useModifyPost = () => {
   const [isModifying, setIsModifying] = useState(false);
   const [modifyError, setModifyError] = useState(null);
 
-  const modifyPost = async (title, prompt) => {
+  const modifyPost = async (title, content, prompt) => {
     setIsModifying(true);
     setModifyError(null);
 
@@ -16,7 +16,8 @@ const useModifyPost = () => {
         },
         body: JSON.stringify({
           title,
-          prompt,
+          content,
+          prompt
         }),
       });
 

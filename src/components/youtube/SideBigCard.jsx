@@ -206,10 +206,10 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
     } else {
       decrementModifications();
       try {
-        console.log("Modifying post with:", { title, prompt: aiModificationText });
+        console.log("Modifying post with:", { title, content: postContent, prompt: aiModificationText });
         
-        // Use modifyPost instead of generatePost for modifications
-        const result = await modifyPost(title, aiModificationText);
+        // Update to pass postContent as the second parameter
+        const result = await modifyPost(title, postContent, aiModificationText);
         console.log("Modification result:", result);
         
         if (result) {
