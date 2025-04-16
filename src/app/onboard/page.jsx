@@ -8,16 +8,33 @@ const OnboardingForm = () => {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState(1);
+  const [timezones, setTimezones] = useState([]);
   const [formData, setFormData] = useState({
     linkedinId: '',
     audience: '',
     niche: '',
     narrative: '',
-    postExamples: ['']
+    postExamples: [''],
+    postScheduleFix: true,
+    postScheduleFixTime: '09:00',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
   });
 
   useEffect(() => {
     setMounted(true);
+    
+    // Fetch available timezones
+    const fetchTimezones = async () => {
+      try {
+        const response = await axios.get('/api/timezones');
+        if (response.data && response.data.timezones) {
+          setTimezones(response.data.timezones);
+        }
+      } catch (error) {
+        console.error('Error fetching timezones:', error);
+      }
+    };
+
     const checkUser = async () => {
       try {
         const cookies = document.cookie.split(';').reduce((acc, cookie) => {
@@ -52,6 +69,7 @@ const OnboardingForm = () => {
       }
     };
 
+    fetchTimezones();
     checkUser();
   }, [router]);
 
@@ -60,10 +78,10 @@ const OnboardingForm = () => {
   }
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
+    const { name, value, type, checked } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }))
   }
 
@@ -92,6 +110,8 @@ const OnboardingForm = () => {
       case 3:
         return formData.postExamples.length >= 3 && 
                formData.postExamples.every(example => example.trim() !== '');
+      case 4:
+        return formData.timezone && formData.postScheduleFixTime;
       default:
         return false;
     }
@@ -100,12 +120,13 @@ const OnboardingForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    if (step !== 3) return;
+    if (step !== 4) return;
 
     // Validate all fields before submission
     if (!formData.audience || !formData.niche || !formData.narrative || 
         formData.postExamples.length < 3 || 
-        !formData.postExamples.every(example => example.trim() !== '')) {
+        !formData.postExamples.every(example => example.trim() !== '') ||
+        !formData.timezone || !formData.postScheduleFixTime) {
       alert('Please fill in all fields and provide at least 3 post examples');
       return;
     }
@@ -133,7 +154,7 @@ const OnboardingForm = () => {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Complete Your Profile</h1>
             <div className="flex gap-2">
-              {[1, 2, 3].map((i) => (
+              {[1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
                   className={`h-2 flex-1 rounded-full ${
@@ -234,6 +255,76 @@ const OnboardingForm = () => {
               </motion.div>
             )}
 
+            {step === 4 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-6"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Post Scheduling
+                  </label>
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div className="flex items-center mb-4">
+                      <input
+                        type="checkbox"
+                        name="postScheduleFix"
+                        id="postScheduleFix"
+                        checked={formData.postScheduleFix}
+                        onChange={handleInputChange}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="postScheduleFix" className="ml-2 text-sm font-medium text-gray-700">
+                        Enable fixed posting time
+                      </label>
+                    </div>
+                    
+                    {formData.postScheduleFix && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Default Posting Time
+                          </label>
+                          <input
+                            type="time"
+                            name="postScheduleFixTime"
+                            value={formData.postScheduleFixTime}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#CB2974] focus:border-transparent"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Posts will be published at this time according to your selected timezone.
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Your Timezone
+                          </label>
+                          <select
+                            name="timezone"
+                            value={formData.timezone}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#CB2974] focus:border-transparent"
+                          >
+                            {timezones.map((timezone) => (
+                              <option key={timezone} value={timezone}>
+                                {timezone}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Your posts will be scheduled according to this timezone.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             <div className="flex justify-between mt-8">
               <button
                 type="button"
@@ -245,9 +336,9 @@ const OnboardingForm = () => {
                 Back
               </button>
               <button
-                type={step === 3 ? 'submit' : 'button'}
+                type={step === 4 ? 'submit' : 'button'}
                 onClick={() => {
-                  if (step !== 3) {
+                  if (step !== 4) {
                     if (validateCurrentStep()) {
                       setStep(prev => prev + 1);
                     } else {
@@ -260,7 +351,7 @@ const OnboardingForm = () => {
                 }`}
                 disabled={!validateCurrentStep()}
               >
-                {step === 3 ? 'Submit' : 'Next'}
+                {step === 4 ? 'Submit' : 'Next'}
               </button>
             </div>
           </form>

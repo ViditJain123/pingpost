@@ -21,12 +21,12 @@ const linkedinSpecs = new mongoose.Schema({
     postScheduleFix: {
         type: Boolean,
         required: true,
-        default: false
+        default: true
     },
     postScheduleFixTime:{
         type: String,
         required: false,
-        default: null
+        default: "09:00"
     },
     timezone: {
         type: String,

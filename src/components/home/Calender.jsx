@@ -1,12 +1,30 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { generateCalendarDays } from "@/utils/generateCalender";
+import axios from "axios";
 
 const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
   const [currentDate, setCurrentDate] = useState({ year, month });
   const calendarDays = generateCalendarDays(currentDate.year, currentDate.month);
   const dayLabels = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
+  const [userTimezone, setUserTimezone] = useState("UTC");
+
+  useEffect(() => {
+    // Fetch user's timezone when component mounts
+    const fetchUserProfile = async () => {
+      try {
+        const response = await axios.get('/api/user/profile');
+        if (response.data?.linkedinSpecs?.timezone) {
+          setUserTimezone(response.data.linkedinSpecs.timezone);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   const handlePreviousMonth = () => {
     setCurrentDate(prev => {
@@ -29,7 +47,7 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
   };
 
   const handleDragOver = (e) => {
-    e.preventDefault();
+    e.preventDefault();    
     e.currentTarget.classList.add('bg-gray-50');
   };
 
@@ -40,21 +58,48 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
   const handleDrop = async (e, date) => {
     e.preventDefault();
     e.currentTarget.classList.remove('bg-gray-50');
-  
+    
     try {
       const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-  
-      // Set the time to 12:00 PM for the selected date by default
-      const scheduleDate = new Date(date);
-      scheduleDate.setHours(12, 0, 0, 0);
-  
+      
+      // Extract date components from the dropped date   
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      const day = date.getDate();
+      
+      // Get current date and time
+      const now = new Date();
+      
+      // Create the schedule date using the calendar date
+      // For today's date, use current hour + 1 to ensure it's in the future
+      // For other dates, use noon as default time
+      let scheduleDate;
+      
+      const isToday = 
+        now.getFullYear() === year && 
+        now.getMonth() === month && 
+        now.getDate() === day;
+      
+      if (isToday) {
+        // For today, set time to current hour + 1
+        const futureHour = now.getHours() + 1;
+        scheduleDate = new Date(year, month, day, futureHour, 0, 0, 0);
+      } else {
+        // For other days, use noon as before
+        scheduleDate = new Date(year, month, day, 12, 0, 0, 0);
+      }
+      
+      const formattedDate = scheduleDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
       const task = {
         ...data,
-        date: scheduleDate.toISOString().split('T')[0],
-        scheduleTime: scheduleDate.toISOString(),
+        date: formattedDate, // For calendar display
+        scheduleTime: scheduleDate.toISOString(), // For API
         status: 'draft',
       };
-  
+      
+      console.log(`Calendar: Scheduling post for date: ${formattedDate} (${scheduleDate.toISOString()}) in timezone ${userTimezone}`);
+      
       // Call the parent function to schedule the task
       await onTaskAdd(task);
     } catch (err) {
@@ -81,7 +126,7 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
     <div className="w-full h-full flex flex-col bg-white rounded-[20px] p-8">
       {/* Month and Year Header with Navigation */}
       <div className="flex items-center justify-between">
-        <button 
+        <button
           onClick={handlePreviousMonth}
           className="p-2 hover:bg-gray-100 rounded-full"
         >
@@ -107,6 +152,11 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
 
       {/* Divider */}
       <div className="h-[1px] bg-gray-200 my-6" />
+      
+      {/* Timezone info */}
+      <div className="mb-2 text-xs text-gray-500">
+        Timezone: {userTimezone}
+      </div>
 
       {/* Scrollable container */}
       <div className="flex-1 overflow-y-auto">
@@ -127,8 +177,8 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
           {calendarDays.map((dateObj, idx) => {
             const isPlaceholder = dateObj.getTime() === 0;
             const isCurrentMonth = dateObj.getMonth() === currentDate.month;
-            const dateStr = dateObj.toISOString().split('T')[0];
-            const dayTasks = tasks.filter(task => task.date === dateStr);
+            const dateStr = isPlaceholder ? '' : dateObj.toISOString().split('T')[0];
+            const dayTasks = isPlaceholder ? [] : tasks.filter(task => task.date === dateStr);
 
             return (
               <div

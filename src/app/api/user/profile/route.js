@@ -35,7 +35,8 @@ export async function GET(req) {
       profilePicture: user.profilePicture,
       linkedinTokenExpiry: user.linkedinTokenExpiry,
       linkedinSpecs: user.linkedinSpecs,
-      subscription: user.subscription
+      subscription: user.subscription,
+      timezone: user.timezone
     };
 
     return new Response(JSON.stringify(userData), {

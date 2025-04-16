@@ -26,20 +26,41 @@ export async function GET(request) {
     });
     console.log(`Posts with specific schedule: ${specificSchedulePosts.length}`);
     
+    // Enhanced debugging for all specific schedule posts
     if (specificSchedulePosts.length > 0) {
-      console.log("Sample specific schedule post:", {
-        id: specificSchedulePosts[0]._id,
-        scheduleTime: specificSchedulePosts[0].scheduleTime,
-        currentTime: now,
-        isScheduleTimeLessThanNow: specificSchedulePosts[0].scheduleTime <= now
+      console.log("All scheduled posts with times:");
+      specificSchedulePosts.forEach(post => {
+        console.log({
+          id: post._id,
+          scheduleTime: post.scheduleTime,
+          currentTime: now,
+          isScheduleTimePast: post.scheduleTime <= now,
+          timeUntilPublish: post.scheduleTime ? (post.scheduleTime - now) / 1000 + ' seconds' : 'N/A',
+          postSpecificSchedule: post.postSpecificSchedule,
+          isReadyByMethod: post.isReadyToPublish()
+        });
       });
     }
     
-    const postsWithSpecificSchedule = await postModel.find({
+    // Improved query for posts with specific schedules that are ready to publish
+    let postsWithSpecificSchedule = await postModel.find({
       postStatus: "scheduled",
       postSpecificSchedule: true,
       scheduleTime: { $lte: now }
-    });
+    }).lean();
+    
+    // Double-check with the model's method as a fallback
+    if (postsWithSpecificSchedule.length === 0) {
+      console.log("No posts found using MongoDB query, trying manual checking...");
+      const allSpecificSchedulePosts = await postModel.find({
+        postStatus: "scheduled",
+        postSpecificSchedule: true
+      });
+      
+      postsWithSpecificSchedule = allSpecificSchedulePosts.filter(post => post.isReadyToPublish());
+      
+      console.log(`Manual check found ${postsWithSpecificSchedule.length} posts ready to publish`);
+    }
     
     console.log(`Posts with specific schedule ready to publish: ${postsWithSpecificSchedule.length}`);
     

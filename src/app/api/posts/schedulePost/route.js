@@ -46,19 +46,20 @@ export async function POST(request) {
       return NextResponse.json({ error: "Schedule time is required" }, { status: 400 });
     }
     
-    // Extract only the date part from scheduleTime
-    const scheduleDateOnly = new Date(scheduleTime);
-    scheduleDateOnly.setHours(0, 0, 0, 0);
+    // Parse the provided schedule time
+    const scheduleDate = new Date(scheduleTime);
     
-    if (isNaN(scheduleDateOnly.getTime())) {
+    if (isNaN(scheduleDate.getTime())) {
       return NextResponse.json({ error: "Invalid schedule time format" }, { status: 400 });
     }
     
     // Check if schedule date is in the future
-    if (scheduleDateOnly < new Date().setHours(0, 0, 0, 0)) {
+    const now = new Date();
+    if (scheduleDate <= now) {
       return NextResponse.json({ error: "Schedule date must be in the future" }, { status: 400 });
     }
     
+    // Get the user for timezone and scheduling preferences
     const user = await userModel.findOne({ linkedinId: userInfo.linkedinId });
 
     if (!user) {
@@ -74,10 +75,13 @@ export async function POST(request) {
     // Determine the final schedule time based on preferences
     let finalScheduleTime;
     let isPostSpecificSchedule = targetPost?.postSpecificSchedule || postSpecificSchedule || false;
+    
+    // Get user timezone (fallback to UTC if not set)
+    const userTimezone = user.linkedinSpecs?.timezone || "UTC";
 
     if (isPostSpecificSchedule) {
       // Use the full date and time from scheduleTime
-      finalScheduleTime = new Date(scheduleTime);
+      finalScheduleTime = scheduleDate;
     } else if (user.linkedinSpecs?.postScheduleFix) {
       // Use the date from scheduleTime but time from user's fixed schedule time
       if (!user.linkedinSpecs.postScheduleFixTime) {
@@ -87,8 +91,11 @@ export async function POST(request) {
         }, { status: 400 });
       }
       
+      // Parse the time string (HH:MM) from user profile
       const [hours, minutes] = user.linkedinSpecs.postScheduleFixTime.split(':').map(Number);
-      finalScheduleTime = new Date(scheduleDateOnly);
+      
+      // Create a new date with the scheduled date but fixed time
+      finalScheduleTime = new Date(scheduleDate);
       finalScheduleTime.setHours(hours, minutes, 0, 0);
     } else {
       return NextResponse.json({ 
@@ -97,15 +104,17 @@ export async function POST(request) {
       }, { status: 400 });
     }
     
-    // Check if the final schedule time is valid and in the future
+    // Final validation on the calculated time
     if (isNaN(finalScheduleTime.getTime())) {
       return NextResponse.json({ error: "Could not determine a valid schedule time" }, { status: 400 });
     }
     
-    if (finalScheduleTime <= new Date()) {
+    if (finalScheduleTime <= now) {
       return NextResponse.json({ error: "Calculated schedule time must be in the future" }, { status: 400 });
     }
 
+    console.log(`Scheduling post for: ${finalScheduleTime.toISOString()} in timezone ${userTimezone}`);
+    
     // Let's find if there's an existing post to update
     if (targetPost) {
       // Update existing post
@@ -115,6 +124,7 @@ export async function POST(request) {
       targetPost.postSpecificSchedule = isPostSpecificSchedule;
       targetPost.scheduleTime = finalScheduleTime;
       targetPost.timeUpdated = new Date();
+      targetPost.timezone = userTimezone;
       
       // Update images if provided
       if (images.length > 0) {
@@ -127,13 +137,14 @@ export async function POST(request) {
       
       await targetPost.save();
       
-      console.log(`Post updated and scheduled successfully: Post ID ${targetPost._id}, Schedule Time: ${finalScheduleTime}`);
+      console.log(`Post updated and scheduled successfully: Post ID ${targetPost._id}, Schedule Time: ${finalScheduleTime}, Timezone: ${userTimezone}`);
       
       return NextResponse.json({
         success: true,
         message: "Post updated and scheduled successfully",
         postId: targetPost._id,
-        scheduleTime: finalScheduleTime
+        scheduleTime: finalScheduleTime,
+        timezone: userTimezone
       });
     } else {
       // Create a new post document
@@ -146,6 +157,7 @@ export async function POST(request) {
         postStatus: "scheduled",
         postSpecificSchedule: isPostSpecificSchedule,
         scheduleTime: finalScheduleTime,
+        timezone: userTimezone,
         timeCreated: new Date(),
         timeUpdated: new Date()
       });
@@ -153,13 +165,14 @@ export async function POST(request) {
       // Save the post
       await newPost.save();
       
-      console.log(`New post scheduled successfully: Post ID ${newPost._id}, Schedule Time: ${finalScheduleTime}`);
+      console.log(`New post scheduled successfully: Post ID ${newPost._id}, Schedule Time: ${finalScheduleTime}, Timezone: ${userTimezone}`);
       
       return NextResponse.json({
         success: true,
         message: "Post scheduled successfully",
         postId: newPost._id,
-        scheduleTime: finalScheduleTime
+        scheduleTime: finalScheduleTime,
+        timezone: userTimezone
       });
     }
   } catch (error) {

@@ -37,14 +37,34 @@ jobs:
           # Display response for debugging
           cat response.json
           
+          # Install jq if not available for better JSON parsing
+          if ! command -v jq &> /dev/null; then
+            echo "Installing jq for JSON parsing..."
+            apt-get update && apt-get install -y jq || true
+          fi
+          
+          # Enhanced response parsing
+          echo "Parsing response details..."
+          if command -v jq &> /dev/null; then
+            echo "Success status: $(jq -r '.success // "unknown"' response.json 2>/dev/null || echo "unknown")"
+            echo "Message: $(jq -r '.message // "No message"' response.json 2>/dev/null || echo "No message")"
+            
+            # Count of posts processed
+            if jq -e '.results' response.json &>/dev/null; then
+              PUBLISHED=$(jq '[.results[] | select(.status=="published")] | length' response.json)
+              FAILED=$(jq '[.results[] | select(.status=="failed")] | length' response.json)
+              echo "Published posts: $PUBLISHED, Failed posts: $FAILED"
+            fi
+            
+            # Check for specific errors
+            if jq -e '.error' response.json &>/dev/null; then
+              echo "Error detected: $(jq -r '.error' response.json)"
+            fi
+          fi
+          
           # Consider any response as success, since no posts to schedule is valid
           if [[ $HTTP_STATUS -ge 200 && $HTTP_STATUS -lt 600 ]]; then
             echo "API call completed with status: $HTTP_STATUS"
-            # Parse response to get message about posts processed
-            if command -v jq &> /dev/null; then
-              MESSAGE=$(jq -r '.message // "No message in response"' response.json 2>/dev/null || echo "Failed to parse response")
-              echo "Response message: $MESSAGE"
-            fi
             exit 0  # Always exit with success
           else
             echo "Network error or API unreachable"

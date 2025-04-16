@@ -6,14 +6,16 @@ function Profile() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [timezones, setTimezones] = useState([]);
 
   const [formData, setFormData] = useState({
     audience: '',
     niche: '',
     narrative: '',
     postExamples: [],
-    postScheduleFix: false,
+    postScheduleFix: true,
     postScheduleFixTime: null,
+    timezone: '',
   });
 
   // For modal state (edit example)
@@ -23,7 +25,19 @@ function Profile() {
 
   useEffect(() => {
     fetchUserData();
+    fetchTimezones();
   }, []);
+
+  const fetchTimezones = async () => {
+    try {
+      const response = await axios.get('/api/timezones');
+      if (response.data && response.data.timezones) {
+        setTimezones(response.data.timezones);
+      }
+    } catch (error) {
+      console.error('Error fetching timezones:', error);
+    }
+  };
 
   const fetchUserData = async () => {
     try {
@@ -37,9 +51,10 @@ function Profile() {
           niche: response.data.linkedinSpecs.niche || '',
           narrative: response.data.linkedinSpecs.narrative || '',
           postExamples: response.data.linkedinSpecs.postExamples || [],
-          postScheduleFix: response.data.linkedinSpecs.postScheduleFix || false,
+          postScheduleFix: response.data.linkedinSpecs.postScheduleFix !== undefined ? response.data.linkedinSpecs.postScheduleFix : true,
           postScheduleFixTime:
-            response.data.linkedinSpecs.postScheduleFixTime || null,
+            response.data.linkedinSpecs.postScheduleFixTime || '09:00',
+          timezone: response.data.linkedinSpecs.timezone || 'UTC',
         });
       }
 
@@ -51,11 +66,10 @@ function Profile() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value, type } = e.target;
+    const { name, value, type, checked } = e.target;
 
-    // If it's the time input, store the raw string or handle it accordingly
-    if (type === 'time') {
-      setFormData({ ...formData, [name]: value });
+    if (type === 'checkbox') {
+      setFormData({ ...formData, [name]: checked });
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -331,11 +345,7 @@ function Profile() {
             </div>
 
             {formData.postScheduleFix && (
-              <div className="p-4">
-                <p className="text-sm text-gray-600 mb-3">
-                  When enabled, your LinkedIn posts will be scheduled to publish
-                  at the specified time.
-                </p>
+              <div className="p-4 space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-700">
                     Select Default Posting Time
@@ -363,8 +373,28 @@ function Profile() {
                     </svg>
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
-                    Posts will be published at this time on the day you schedule
-                    them.
+                    Posts will be published at this time on the day you schedule them.
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    Your Timezone
+                  </label>
+                  <select
+                    name="timezone"
+                    value={formData.timezone}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {timezones.map(timezone => (
+                      <option key={timezone} value={timezone}>
+                        {timezone}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Your scheduling times will be based on this timezone.
                   </p>
                 </div>
               </div>
