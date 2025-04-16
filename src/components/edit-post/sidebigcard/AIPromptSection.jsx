@@ -75,9 +75,9 @@ const AIPromptSection = ({
           {/* Generate button */}
           <button
             onClick={handleGenerateButtonClick}
-            disabled={isGenerating || !aiModificationText.trim()}
+            disabled={isGenerating || !aiModificationText.trim() || isRecording || isProcessing}
             className={`flex items-center px-4 py-2 rounded-lg font-medium transition ${
-              isGenerating || !aiModificationText.trim()
+              isGenerating || !aiModificationText.trim() || isRecording || isProcessing
                 ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                 : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
@@ -96,9 +96,9 @@ const AIPromptSection = ({
           {isEditing && (
             <button
               onClick={handleModifyButtonClick}
-              disabled={isGenerating}
+              disabled={isGenerating || isRecording || isProcessing}
               className={`flex items-center px-4 py-2 rounded-lg font-medium transition ${
-                isGenerating
+                isGenerating || isRecording || isProcessing
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : 'bg-green-600 text-white hover:bg-green-700'
               }`}

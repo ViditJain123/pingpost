@@ -81,9 +81,9 @@ const AIPromptSection = ({
       
       <button 
         onClick={handleModifyButtonClick}
-        disabled={isGenerating}
+        disabled={isGenerating || isRecording || isProcessing}
         className={`w-full p-3 ${
-          isGenerating 
+          isGenerating || isRecording || isProcessing
             ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
             : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
         } font-medium rounded-lg flex items-center justify-center transition-all duration-200`}

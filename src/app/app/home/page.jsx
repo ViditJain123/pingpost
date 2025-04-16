@@ -5,6 +5,7 @@ import Card from '@/components/home/Card';
 import Calendar from '@/components/home/Calender';
 import SearchBar from '@/components/home/SearchBar';
 import { usePosts } from '@/hooks/usePosts';
+import ErrorCard from '@/components/common/ErrorCard'; // Import the ErrorCard component
 
 export default function HomePage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { posts: cardData, loading, error, isAuthenticated, refetch } = usePosts();
   const [schedulingStatus, setSchedulingStatus] = useState({ loading: false, error: null, success: false });
+  const [errorMessage, setErrorMessage] = useState(null); // State for error messages
   
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -105,8 +107,42 @@ export default function HomePage() {
     }
   };
 
-  const handleTaskAdd = (task) => {
-    setTasks(prev => [...prev, task]);
+  const handleTaskAdd = async (task) => {
+    try {
+      const post = cardData.find((card) => card.id === task.id);
+
+      if (!post) {
+        throw new Error('Post not found');
+      }
+
+      const response = await fetch('/api/posts/schedulePost', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          postId: task.id,
+          content: post.content || post.description, // Ensure content is passed
+          title: task.title,
+          scheduleTime: task.scheduleTime,
+        }),
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to schedule post');
+      }
+  
+      // Update task status to 'scheduled'
+      setTasks((prev) => [
+        ...prev,
+        { ...task, status: 'scheduled' },
+      ]);
+    } catch (error) {
+      console.error('Error scheduling post:', error);
+      setErrorMessage(error.message); // Set the error message
+    }
   };
 
   const handleTaskRemove = (taskId) => {
@@ -248,6 +284,13 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#F9F9F9]">
+      {/* Show ErrorCard if there's an error */}
+      {errorMessage && (
+        <ErrorCard
+          message={errorMessage}
+          onClose={() => setErrorMessage(null)} // Clear the error message on close
+        />
+      )}
       <div className="relative h-screen bg-[#F9F9F9] overflow-hidden flex flex-col md:flex-row pl-16">
         <section className="w-full md:w-[369px] mt-[100px] mx-4 md:ml-10 mb-10 h-[calc(100vh-140px)] bg-white rounded-[14.01px] p-4 flex flex-col shadow-md min-w-0">
           {/* Scrollable cards container */}
@@ -299,12 +342,6 @@ export default function HomePage() {
                 onTaskAdd={handleTaskAdd}
                 onTaskRemove={handleTaskRemove}
               />
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="absolute bottom-6 right-6 px-8 py-2.5 rounded-lg bg-gradient-to-r from-[#4776E6] to-[#8E54E9] text-white font-medium hover:opacity-90 transition-opacity"
-              >
-                Schedule
-              </button>
             </div>
           </section>
         </div>

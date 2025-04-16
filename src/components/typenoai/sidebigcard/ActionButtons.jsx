@@ -8,6 +8,8 @@ const ActionButtons = ({
   isSaving, 
   isPublishing,
   isGenerating,
+                        isRecording,
+  isProcessing,
   showDraftTooltip,
   setShowDraftTooltip,
   setShowPreviewModal,
@@ -25,14 +27,17 @@ const ActionButtons = ({
     window.location.reload();
   };
 
+  // Combine all states that should disable buttons
+  const isDisabled = isSaving || isGenerating || isPublishing || isRecording || isProcessing;
+
   return (
     <div className="flex justify-center items-center mt-6 gap-3">
       <div className="relative">
         <button
           onClick={handleSaveDraft}
-          disabled={isSaving || isGenerating}
+          disabled={isDisabled}
           className={`flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition w-24 ${
-            isSaving || isGenerating
+            isDisabled
               ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
@@ -59,9 +64,9 @@ const ActionButtons = ({
       
       <button
         onClick={handleDiscardPost}
-        disabled={isPublishing || isSaving || isGenerating}
+        disabled={isDisabled}
         className={`flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition w-24 ${
-          isPublishing || isSaving || isGenerating
+          isDisabled
             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
             : 'bg-red-100 text-red-700 hover:bg-red-200'
         }`}
@@ -72,9 +77,9 @@ const ActionButtons = ({
       
       <button
         onClick={() => setShowPreviewModal(true)}
-        disabled={isGenerating}
+        disabled={isDisabled}
         className={`flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition w-24 ${
-          isGenerating
+          isDisabled
             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
         }`}
@@ -85,9 +90,9 @@ const ActionButtons = ({
       
       <button
         onClick={handlePublishPost}
-        disabled={isPublishing || isGenerating}
+        disabled={isDisabled}
         className={`flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition w-24 ${
-          isPublishing || isGenerating
+          isDisabled
             ? 'bg-blue-300 text-white cursor-not-allowed'
             : 'bg-blue-600 text-white hover:bg-blue-700'
         }`}

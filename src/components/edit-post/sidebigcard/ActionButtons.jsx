@@ -8,20 +8,25 @@ const ActionButtons = ({
   isSaving,
   isPublishing,
   isGenerating,
+  isRecording,
+  isProcessing,
   showDraftTooltip,
   setShowDraftTooltip,
   setShowPreviewModal,
   saveStatus,
   postStatus
 }) => {
+  // Combine all states that should disable buttons
+  const isDisabled = isSaving || isGenerating || isPublishing || isRecording || isProcessing;
+
   return (
     <div className="flex justify-between items-center mt-6 space-x-3">
       <div className="relative">
         <button
           onClick={handleSaveDraft}
-          disabled={isSaving || isGenerating}
+          disabled={isDisabled}
           className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition ${
-            isSaving || isGenerating
+            isDisabled
               ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
@@ -48,9 +53,9 @@ const ActionButtons = ({
       
       <button
         onClick={() => setShowPreviewModal(true)}
-        disabled={isGenerating}
+        disabled={isDisabled}
         className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition ${
-          isGenerating
+          isDisabled
             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
         }`}
@@ -61,9 +66,9 @@ const ActionButtons = ({
       
       <button
         onClick={handlePublishPost}
-        disabled={isPublishing || isGenerating}
+        disabled={isDisabled}
         className={`flex items-center px-6 py-2 rounded-lg text-sm font-medium transition ${
-          isPublishing || isGenerating
+          isDisabled
             ? 'bg-blue-300 text-white cursor-not-allowed'
             : 'bg-blue-600 text-white hover:bg-blue-700'
         }`}

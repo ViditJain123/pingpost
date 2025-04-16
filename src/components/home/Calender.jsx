@@ -37,26 +37,29 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
     e.currentTarget.classList.remove('bg-gray-50');
   };
 
-  const handleDrop = (e, date) => {
+  const handleDrop = async (e, date) => {
     e.preventDefault();
     e.currentTarget.classList.remove('bg-gray-50');
-    
+  
     try {
       const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-      
+  
       // Set the time to 12:00 PM for the selected date by default
       const scheduleDate = new Date(date);
       scheduleDate.setHours(12, 0, 0, 0);
-      
-      const dateStr = date.toISOString().split('T')[0];
-      onTaskAdd({ 
-        ...data, 
-        date: dateStr,
-        scheduleTime: scheduleDate.toISOString(),  // Include the full ISO timestamp
-        status: 'draft' // Mark as draft initially
-      });
+  
+      const task = {
+        ...data,
+        date: scheduleDate.toISOString().split('T')[0],
+        scheduleTime: scheduleDate.toISOString(),
+        status: 'draft',
+      };
+  
+      // Call the parent function to schedule the task
+      await onTaskAdd(task);
     } catch (err) {
-      console.error('Failed to parse drag data:', err);
+      console.error('Failed to schedule post:', err);
+      // Error handling is now managed by the parent component
     }
   };
 
