@@ -9,8 +9,9 @@ export async function GET(request) {
   try {
     await dbConnect();
     
+    // Always use UTC time to match database storage format
     const now = new Date();
-    console.log(`Current server time: ${now.toISOString()}`);
+    console.log(`Current UTC time: ${now.toISOString()}`);
     console.log(`Current server timezone: UTC${-now.getTimezoneOffset()/60} (offset: ${now.getTimezoneOffset()} minutes)`);
     let postsToPublish = [];
     
@@ -34,7 +35,7 @@ export async function GET(request) {
         console.log({
           id: post._id,
           scheduleTime: post.scheduleTime,
-          currentTime: now,
+          currentUTCTime: now,
           isScheduleTimePast: post.scheduleTime <= now,
           timeUntilPublish: post.scheduleTime ? (post.scheduleTime - now) / 1000 + ' seconds' : 'N/A',
           postSpecificSchedule: post.postSpecificSchedule,
@@ -108,29 +109,23 @@ export async function GET(request) {
               // Log time zone information for debugging
               console.log(`Server timezone offset: ${fixedTime.getTimezoneOffset()} minutes`);
               
-              // Set hours and minutes - interpret the time as if in the same timezone as the server
-              fixedTime.setHours(hours, minutes, 0, 0);
+              // Set hours and minutes in UTC
+              fixedTime.setUTCHours(hours, minutes, 0, 0);
               
-              console.log(`Fixed time interpreted as: ${fixedTime.toISOString()}`);
+              console.log(`Fixed time in UTC: ${fixedTime.toISOString()}`);
             } else {
-              // Try standard date parsing
+              // Try standard date parsing (assumes ISO format which is UTC)
               fixedTime = new Date(fixedTimeStr);
             }
             
-            const currentTime = new Date();
-            
             // For debugging
-            console.log(`Current time (ISO): ${currentTime.toISOString()}`);
-            console.log(`Fixed time (ISO): ${fixedTime.toISOString()}`);
-            console.log(`Current > Fixed: ${currentTime > fixedTime}`);
+            console.log(`Current UTC time (ISO): ${now.toISOString()}`);
+            console.log(`Fixed UTC time (ISO): ${fixedTime.toISOString()}`);
+            console.log(`Current > Fixed: ${now > fixedTime}`);
             
-            // Check if it's time to publish based on the fixed schedule
-            // Compare hours and minutes
-            if (
-              // Check if current time is past the scheduled time
-              currentTime >= fixedTime
-            ) {
-              console.log(`Time to publish! Current: ${currentTime.toISOString()}, Fixed: ${fixedTime.toISOString()}`);
+            // Check if it's time to publish based on the fixed schedule in UTC
+            if (now >= fixedTime) {
+              console.log(`Time to publish! Current UTC: ${now.toISOString()}, Fixed UTC: ${fixedTime.toISOString()}`);
               // Add these posts to the list of posts to publish
               postsToPublish = [...postsToPublish, ...postsByUser[linkedinId]];
             }
@@ -161,14 +156,14 @@ export async function GET(request) {
             if (/^\d{1,2}:\d{2}$/.test(fixedTimeStr)) {
               const [hours, minutes] = fixedTimeStr.split(':').map(Number);
               fixedTime = new Date();
-              fixedTime.setHours(hours, minutes, 0, 0);
+              fixedTime.setUTCHours(hours, minutes, 0, 0);
             } else {
               // Try standard date parsing
               fixedTime = new Date(fixedTimeStr);
             }
             
-            console.log(`Current hours:minutes: ${now.getHours()}:${now.getMinutes()}`);
-            console.log(`Fixed time hours:minutes: ${fixedTime.getHours()}:${fixedTime.getMinutes()}`);
+            console.log(`Current UTC hours:minutes: ${now.getUTCHours()}:${now.getUTCMinutes()}`);
+            console.log(`Fixed UTC time hours:minutes: ${fixedTime.getUTCHours()}:${fixedTime.getUTCMinutes()}`);
             console.log(`Fixed time valid: ${!isNaN(fixedTime.getTime())}`);
           }
         }
