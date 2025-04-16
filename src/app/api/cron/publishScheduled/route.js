@@ -79,6 +79,8 @@ export async function GET(request) {
     const postsByUser = {};
   
     if (postsWithoutSpecificSchedule.length > 0) {
+      console.log(`Checking ${postsWithoutSpecificSchedule.length} posts with fixed schedules...`);
+      
       // Group posts by user
       postsWithoutSpecificSchedule.forEach(post => {
         if (!postsByUser[post.linkedinId]) {
@@ -123,18 +125,32 @@ export async function GET(request) {
             console.log(`Fixed UTC time (ISO): ${fixedTime.toISOString()}`);
             console.log(`Current > Fixed: ${now > fixedTime}`);
             
-            // Check if it's time to publish based on the fixed schedule in UTC
-            if (now >= fixedTime) {
-              console.log(`Time to publish! Current UTC: ${now.toISOString()}, Fixed UTC: ${fixedTime.toISOString()}`);
-              // Add these posts to the list of posts to publish
-              postsToPublish = [...postsToPublish, ...postsByUser[linkedinId]];
-            }
+            // Check each post individually
+            const postsReadyToPublish = postsByUser[linkedinId].filter(post => {
+              // Get the post's scheduled time
+              const postScheduleTime = post.scheduleTime;
+              
+              console.log(`Post ${post._id} schedule time: ${postScheduleTime}`);
+              console.log(`Is post schedule time earlier than now: ${postScheduleTime <= now}`);
+              
+              // Check if current time is past the post's schedule time (regardless of fixed schedule)
+              if (postScheduleTime && postScheduleTime <= now) {
+                console.log(`Post ${post._id} has a past schedule time and is ready to publish`);
+                return true;
+              }
+              
+              // Otherwise, check the fixed schedule time
+              return now >= fixedTime;
+            });
+            
+            console.log(`Found ${postsReadyToPublish.length} posts ready to publish for user ${linkedinId}`);
+            postsToPublish = [...postsToPublish, ...postsReadyToPublish];
           }
         }
       }
     }
     
-    console.log(`Found ${postsToPublish.length} posts to publish`);
+    console.log(`Found ${postsToPublish.length} posts to publish in total`);
     
     // Extra debug logging for fixed schedule posts
     if (postsWithoutSpecificSchedule.length > 0) {
