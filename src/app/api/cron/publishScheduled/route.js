@@ -11,6 +11,7 @@ export async function GET(request) {
     
     const now = new Date();
     console.log(`Current server time: ${now.toISOString()}`);
+    console.log(`Current server timezone: UTC${-now.getTimezoneOffset()/60} (offset: ${now.getTimezoneOffset()} minutes)`);
     let postsToPublish = [];
     
     // Debug: Check how many scheduled posts exist in total
@@ -100,8 +101,17 @@ export async function GET(request) {
             // Check if the time is just "HH:MM" format
             if (/^\d{1,2}:\d{2}$/.test(fixedTimeStr)) {
               const [hours, minutes] = fixedTimeStr.split(':').map(Number);
+              
+              // Create today's date in UTC
               fixedTime = new Date();
+              
+              // Log time zone information for debugging
+              console.log(`Server timezone offset: ${fixedTime.getTimezoneOffset()} minutes`);
+              
+              // Set hours and minutes - interpret the time as if in the same timezone as the server
               fixedTime.setHours(hours, minutes, 0, 0);
+              
+              console.log(`Fixed time interpreted as: ${fixedTime.toISOString()}`);
             } else {
               // Try standard date parsing
               fixedTime = new Date(fixedTimeStr);
@@ -109,13 +119,18 @@ export async function GET(request) {
             
             const currentTime = new Date();
             
+            // For debugging
+            console.log(`Current time (ISO): ${currentTime.toISOString()}`);
+            console.log(`Fixed time (ISO): ${fixedTime.toISOString()}`);
+            console.log(`Current > Fixed: ${currentTime > fixedTime}`);
+            
             // Check if it's time to publish based on the fixed schedule
             // Compare hours and minutes
             if (
-              // Replace exact time match with a check if current time is later than fixed time
-              (currentTime.getHours() > fixedTime.getHours()) || 
-              (currentTime.getHours() === fixedTime.getHours() && currentTime.getMinutes() >= fixedTime.getMinutes())
+              // Check if current time is past the scheduled time
+              currentTime >= fixedTime
             ) {
+              console.log(`Time to publish! Current: ${currentTime.toISOString()}, Fixed: ${fixedTime.toISOString()}`);
               // Add these posts to the list of posts to publish
               postsToPublish = [...postsToPublish, ...postsByUser[linkedinId]];
             }
