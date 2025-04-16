@@ -36,8 +36,6 @@ export async function POST(request) {
       };
     }
 
-    
-    
     const { content, title, scheduleTime, visibility, images = [], imageUrls = [], postId, postSpecificSchedule } = requestData;
     
     if (!content) {

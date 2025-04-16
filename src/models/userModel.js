@@ -1,3 +1,4 @@
+import { time } from "framer-motion";
 import mongoose from "mongoose";
 
 const linkedinSpecs = new mongoose.Schema({
@@ -26,7 +27,12 @@ const linkedinSpecs = new mongoose.Schema({
         type: String,
         required: false,
         default: null
-    }
+    },
+    timezone: {
+        type: String,
+        required: true,
+        default: "UTC"
+    },
 });
 
 const subscription = new mongoose.Schema({

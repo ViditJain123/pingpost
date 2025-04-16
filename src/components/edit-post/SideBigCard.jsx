@@ -133,6 +133,7 @@ const SideBigCard = ({ postId, postData, postContent, onUpdatePostContent, updat
         setApiImageUrls([]);
         setImageSourceMap({});
         onUpdatePostContent(''); // Clear the post content
+        setIsFirstGeneration(true); // Reset to show Generate button instead of Modify
         
         setTimeout(() => {
           setSaveStatus(null);
@@ -316,6 +317,7 @@ const SideBigCard = ({ postId, postData, postContent, onUpdatePostContent, updat
         setApiImageUrls([]);
         setImageSourceMap({});
         onUpdatePostContent('');
+        setIsFirstGeneration(true); // Reset to show Generate button instead of Modify
         
         setTimeout(() => {
           setPostStatus(null);
