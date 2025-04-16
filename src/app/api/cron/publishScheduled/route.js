@@ -112,8 +112,9 @@ export async function GET(request) {
             // Check if it's time to publish based on the fixed schedule
             // Compare hours and minutes
             if (
-              currentTime.getHours() === fixedTime.getHours() &&
-              currentTime.getMinutes() === fixedTime.getMinutes()
+              // Replace exact time match with a check if current time is later than fixed time
+              (currentTime.getHours() > fixedTime.getHours()) || 
+              (currentTime.getHours() === fixedTime.getHours() && currentTime.getMinutes() >= fixedTime.getMinutes())
             ) {
               // Add these posts to the list of posts to publish
               postsToPublish = [...postsToPublish, ...postsByUser[linkedinId]];
