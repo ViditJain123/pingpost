@@ -1,6 +1,8 @@
 import React from 'react';
 import { FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
 import { LuTextCursorInput } from 'react-icons/lu';
+import { RiMagicLine } from 'react-icons/ri';
+import { RiMagicStickLine } from 'react-icons/ri';
 
 const AIPromptSection = ({
   aiModificationText,
@@ -88,7 +90,10 @@ const AIPromptSection = ({
                 <span>Generating...</span>
               </>
             ) : (
-              <>Generate</>
+              <>
+                <RiMagicLine className="mr-2" />
+                Generate
+              </>
             )}
           </button>
           

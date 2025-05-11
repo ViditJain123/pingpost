@@ -36,16 +36,34 @@ const PostInput = ({ onContentChange, content, isLoading, titleStatus }) => {
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-7 w-full h-full border border-gray-100 relative">
+      {/* Fully opaque loading indicator with standardized style matching profile page */}
       {isLoading && (
-        <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-10 rounded-xl">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-opacity-75"></div>
-            <p className="mt-4 text-gray-700 font-medium">Generating your post...</p>
-          </div>
+        <div className="absolute inset-0 bg-white z-50 flex flex-col items-center justify-center rounded-xl">
+          <svg
+            className="animate-spin h-8 w-8 text-blue-600 mb-2"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            />
+          </svg>
+          <p className="text-md font-medium text-gray-700">Generating your post...</p>
         </div>
       )}
       
-      {titleStatus === 'generated' && !isLoading && content && (
+      {titleStatus === 'generated' && content && (
         <div className="absolute top-3 right-3 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full z-10">
           Generated Post
         </div>

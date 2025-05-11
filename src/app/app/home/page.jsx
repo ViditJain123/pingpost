@@ -333,8 +333,8 @@ export default function HomePage() {
           </section>
 
           {/* Right section with Calendar */}
-          <section className="flex-1 mt-[100px] mx-4 md:mx-10 mb-10 h-[calc(100vh-140px)]">
-            <div className="w-full h-full bg-white rounded-[14.01px] p-6 shadow-lg relative">
+          <section className="flex-1 mt-[100px] mx-4 md:mx-10 mb-10 h-[calc(100vh-140px)] flex">
+            <div className="w-full h-full bg-white rounded-[14.01px] p-2 shadow-lg relative flex overflow-hidden">
               <Calendar
                 year={new Date().getFullYear()}
                 month={new Date().getMonth()}

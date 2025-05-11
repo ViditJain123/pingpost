@@ -32,11 +32,28 @@ const PostInput = ({ onContentChange, content, isLoading }) => {
   return (
     <div className="bg-white rounded-xl shadow-lg p-7 w-full h-full border border-gray-100 relative">
       {isLoading && (
-        <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-10 rounded-xl">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-opacity-75"></div>
-            <p className="mt-4 text-gray-700 font-medium">Loading your post...</p>
-          </div>
+        <div className="absolute inset-0 bg-white z-10 flex flex-col items-center justify-center rounded-xl">
+          <svg
+            className="animate-spin h-8 w-8 text-blue-600 mb-2"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            />
+          </svg>
+          <p className="text-md font-medium text-gray-700">Loading your post...</p>
         </div>
       )}
       <textarea

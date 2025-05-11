@@ -6,9 +6,15 @@ import axios from "axios";
 
 const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
   const [currentDate, setCurrentDate] = useState({ year, month });
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const calendarDays = generateCalendarDays(currentDate.year, currentDate.month);
   const dayLabels = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
   const [userTimezone, setUserTimezone] = useState("UTC");
+  
+  const months = [
+    "January", "February", "March", "April", "May", "June", 
+    "July", "August", "September", "October", "November", "December"
+  ];
 
   useEffect(() => {
     // Fetch user's timezone when component mounts
@@ -25,6 +31,20 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
 
     fetchUserProfile();
   }, []);
+  
+  useEffect(() => {
+    // Handle click outside to close the month dropdown
+    const handleClickOutside = (event) => {
+      if (showMonthDropdown && !event.target.closest('.month-dropdown-container')) {
+        setShowMonthDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMonthDropdown]);
 
   const handlePreviousMonth = () => {
     setCurrentDate(prev => {
@@ -44,6 +64,11 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
       }
       return { ...prev, month: newMonth };
     });
+  };
+  
+  const handleMonthSelect = (monthIndex) => {
+    setCurrentDate(prev => ({ ...prev, month: monthIndex }));
+    setShowMonthDropdown(false);
   };
 
   const handleDragOver = (e) => {
@@ -123,49 +148,76 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white rounded-[20px] p-8">
+    <div className="w-full h-full flex flex-col bg-white rounded-[20px] p-2 overflow-hidden">
       {/* Month and Year Header with Navigation */}
       <div className="flex items-center justify-between">
         <button
           onClick={handlePreviousMonth}
-          className="p-2 hover:bg-gray-100 rounded-full"
+          className="p-1 hover:bg-gray-100 rounded-full"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <h2 className="text-[32px] font-semibold text-[#1F1F1F]">
-          {new Intl.DateTimeFormat("en-US", { 
-            month: "long"
-          }).format(new Date(currentDate.year, currentDate.month))}{" "}
-          {currentDate.year}
-        </h2>
+        <div className="relative month-dropdown-container">
+          <button 
+            className="text-xl font-semibold text-[#1F1F1F] flex items-center gap-1 hover:bg-gray-50 px-2 py-1 rounded-md"
+            onClick={() => setShowMonthDropdown(!showMonthDropdown)}
+          >
+            {new Intl.DateTimeFormat("en-US", { 
+              month: "short"
+            }).format(new Date(currentDate.year, currentDate.month))}{" "}
+            {currentDate.year}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          
+          {showMonthDropdown && (
+            <div className="absolute z-10 mt-1 bg-white rounded-md shadow-lg border border-gray-200 w-48 max-h-60 overflow-y-auto">
+              <ul className="py-1">
+                {months.map((monthName, index) => (
+                  <li key={monthName}>
+                    <button
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
+                        currentDate.month === index ? "bg-gray-50 font-medium" : ""
+                      }`}
+                      onClick={() => handleMonthSelect(index)}
+                    >
+                      {monthName}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
         <button 
           onClick={handleNextMonth}
-          className="p-2 hover:bg-gray-100 rounded-full"
+          className="p-1 hover:bg-gray-100 rounded-full"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
       </div>
 
       {/* Divider */}
-      <div className="h-[1px] bg-gray-200 my-6" />
+      <div className="h-[1px] bg-gray-200 my-2" />
       
       {/* Timezone info */}
-      <div className="mb-2 text-xs text-gray-500">
+      <div className="mb-1 text-xs text-gray-500">
         Timezone: {userTimezone}
       </div>
 
-      {/* Scrollable container */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Calendar container (non-scrollable) */}
+      <div className="flex-1 flex flex-col">
         {/* Weekday labels */}
-        <div className="grid grid-cols-7 mb-4 sticky top-0 bg-white pt-2">
+        <div className="grid grid-cols-7 mb-1 bg-white pt-1">
           {dayLabels.map((label) => (
             <div 
               key={label} 
-              className="flex items-center justify-center text-sm text-[#8A8A8A]"
+              className="flex items-center justify-center text-xs text-[#8A8A8A]"
             >
               {label}
             </div>
@@ -173,7 +225,7 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
         </div>
 
         {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1 flex-1 auto-rows-fr">
           {calendarDays.map((dateObj, idx) => {
             const isPlaceholder = dateObj.getTime() === 0;
             const isCurrentMonth = dateObj.getMonth() === currentDate.month;
@@ -183,7 +235,7 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
             return (
               <div
                 key={idx}
-                className="aspect-square relative"
+                className="h-full w-full relative"
               >
                 {!isPlaceholder && (
                   <div 
@@ -196,23 +248,24 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
                       transition-all
                       hover:border-[#1a1a1a]
                       cursor-pointer
-                      p-2
+                      p-1
+                      min-h-[70px]
                     `}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, dateObj)}
                   >
                     <span className={`
-                      text-[15px] font-medium
+                      text-[12px] font-medium
                       ${isCurrentMonth ? 'text-[#1F1F1F]' : 'text-[#9B9B9B]'}
                     `}>
                       {dateObj.getDate()}
                     </span>
-                    <div className="flex-1 mt-1 overflow-y-auto">
-                      {dayTasks.map(task => (
+                    <div className="flex-1 mt-1 overflow-hidden max-h-[80%]">
+                      {dayTasks.slice(0, 3).map(task => (
                         <div 
                           key={task.id}
-                          className={`${getTaskColor(task.status)} text-sm p-1 rounded mb-1 flex items-center justify-between animate-fade-in group`}
+                          className={`${getTaskColor(task.status)} text-xs p-1 rounded mb-1 flex items-center justify-between animate-fade-in group`}
                         >
                           <span className="truncate flex-1">{task.title}</span>
                           {task.status !== 'published' && (
@@ -229,6 +282,11 @@ const Calendar = ({ year, month, tasks, onTaskAdd, onTaskRemove }) => {
                           )}
                         </div>
                       ))}
+                      {dayTasks.length > 3 && (
+                        <div className="text-xs text-gray-500 text-center mt-1">
+                          +{dayTasks.length - 3} more
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

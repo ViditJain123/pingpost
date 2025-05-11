@@ -160,17 +160,36 @@ function MassScheduler() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 pl-8 pt-16">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-        <p className="text-muted-foreground">Loading titles...</p>
+      <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+        <svg
+          className="animate-spin h-8 w-8 text-blue-600 mb-2"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8H4z"
+          />
+        </svg>
+        <p className="text-md font-medium text-gray-700">Loading titles...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 pl-8 pt-16">
-        <p className="text-red-500 mb-4">{error}</p>
+      <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+        <p className="text-red-500 text-md font-medium mb-2">{error}</p>
         <Button onClick={checkTitleStatus}>Try Again</Button>
       </div>
     );
@@ -284,7 +303,26 @@ function MassScheduler() {
         >
           {refreshing ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <svg
+                className="animate-spin h-5 w-5 text-blue-600 mr-2"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8H4z"
+                />
+              </svg>
               Refreshing...
             </>
           ) : (
@@ -310,7 +348,26 @@ function MassScheduler() {
         >
           {submitting ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <svg
+                className="animate-spin h-5 w-5 text-white mr-2"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8H4z"
+                />
+              </svg>
               Saving...
             </>
           ) : (

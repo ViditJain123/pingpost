@@ -1,4 +1,5 @@
 import React from 'react';
+import { RiMagicLine } from 'react-icons/ri';
 
 const AIPromptSection = ({ 
   aiModificationText, 
@@ -88,7 +89,7 @@ const AIPromptSection = ({
             : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
         } font-medium rounded-lg flex items-center justify-center transition-all duration-200`}
       >
-        {isGenerating ? (
+        {false && isGenerating ? ( /* Disabled local loading indicator */
           <>
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -98,20 +99,7 @@ const AIPromptSection = ({
           </>
         ) : isFirstGeneration ? (
           <>
-            <svg 
-              className="w-5 h-5 mr-2" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path 
-                d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-              />
-            </svg>
+            <RiMagicLine className="w-5 h-5 mr-2" />
             Generate
           </>
         ) : (

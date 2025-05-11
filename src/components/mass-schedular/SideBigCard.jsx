@@ -170,6 +170,7 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus,
       return;
     }
 
+    // Always update the parent loading state immediately
     updateGeneratingStatus(true);
 
     if (isFirstGeneration) {
@@ -207,6 +208,7 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus,
         setErrorMessage('Failed to generate post. Please try again.');
         setTimeout(() => setErrorMessage(''), 5000);
       } finally {
+        // Always notify parent when we're done - with a small delay
         updateGeneratingStatus(false);
       }
     } else {
