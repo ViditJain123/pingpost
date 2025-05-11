@@ -245,40 +245,29 @@ function MassScheduler() {
             <div 
               key={index} 
               className={`relative p-4 rounded-lg flex items-center gap-3 cursor-pointer 
-                transition-all duration-200 ease-in-out border ${isSelected ? "border-transparent" : ""}`}
+                transition-all duration-200 ease-in-out ${isSelected ? "border-2 border-[#0a66c2]" : "border border-gray-200"}`}
               onClick={() => handleTitleSelection(title)}
-              style={isSelected ? {
-                position: 'relative',
-                background: 'white',
-                padding: isSelected ? 'calc(1rem - 3px)' : 'calc(1rem - 1px)',
-                cursor: 'pointer'
-              } : {
-                cursor: 'pointer'
+              style={{
+                background: isSelected ? 'rgba(10, 102, 194, 0.03)' : 'white',
+                cursor: 'pointer',
+                boxShadow: isSelected ? '0 0 0 1px #0a66c2' : 'none'
               }}
             >
-              {isSelected && (
-                <div 
-                  className="absolute inset-0 rounded-lg -z-10" 
+              <div onClick={(e) => e.stopPropagation()}>
+                <Checkbox 
+                  checked={isSelected} 
+                  onCheckedChange={() => handleTitleSelection(title)}
+                  className={`transition-all duration-200 ${
+                    isSelected 
+                      ? "border-[#0a66c2] bg-[#0a66c2] text-white" 
+                      : "border-gray-300"
+                  }`}
                   style={{
-                    background: 'linear-gradient(135deg, #da44ff 0%, #8b5cf6 100%)',
-                    borderRadius: 'inherit',
-                    margin: '-3px',
-                    transition: 'all 0.2s ease-in-out'
+                    transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                    boxShadow: isSelected ? '0 0 0 2px rgba(10, 102, 194, 0.2)' : 'none'
                   }}
                 />
-              )}
-              <Checkbox 
-                checked={isSelected} 
-                onCheckedChange={() => handleTitleSelection(title)}
-                className={`transition-all duration-200 ${
-                  isSelected 
-                    ? "ring-1 ring-purple-400" 
-                    : ""
-                }`}
-                style={isSelected ? {
-                  borderColor: '#da44ff',
-                } : {}}
-              />
+              </div>
               <span className="text-sm">{title}</span>
             </div>
           );
