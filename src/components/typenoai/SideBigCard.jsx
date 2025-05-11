@@ -1,27 +1,30 @@
 "use client"
 
+// Import statements including the new external link component
 import React, { useState, useEffect } from 'react';
 import useImageUpload from '../../hooks/useImageUpload';
 import useAudioRecording from '../../hooks/useAudioRecording';
 import useModifications from '../../hooks/useModifications';
 import useDraftPost from '../../hooks/useDraftPost';
-import useGeneratePost from '../../hooks/useGeneratePost';
+import useGeneratePostWithLink from '../../hooks/useGeneratePostWithLink';
 import useModifyPost from '../../hooks/useModifyPost';
 import usePublishPost from '../../hooks/usePublishPost';
 import PreviewModal from './PreviewModal';
 
-// Import the new component files
+// Import the component files
 import TitleInput from './sidebigcard/TitleInput';
 import AIPromptSection from './sidebigcard/AIPromptSection';
 import APIImageSection from './sidebigcard/APIImageSection';
 import ImageUploadSection from './sidebigcard/ImageUploadSection';
 import ActionButtons from './sidebigcard/ActionButtons';
+import ExternalLinkInput from './sidebigcard/ExternalLinkInput';
 
 const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus }) => {
   const [showDraftTooltip, setShowDraftTooltip] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [aiModificationText, setAiModificationText] = useState('');
   const [title, setTitle] = useState('');
+  const [externalLink, setExternalLink] = useState('');
   const [saveStatus, setSaveStatus] = useState(null);
   const [isFirstGeneration, setIsFirstGeneration] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
@@ -34,7 +37,7 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
   const { uploadedImages, handleImageUpload, removeImage: originalRemoveImage, maxImagesReached, imageFiles, addImageFromUrl, clearImages } = useImageUpload(4);
   const { saveDraft, isSaving, saveSuccess, saveError } = useDraftPost();
   const { publishPost, isPublishing, publishSuccess, publishError } = usePublishPost();
-  const { generatePost, isGenerating, error: generateError } = useGeneratePost();
+  const { generatePost, isGenerating, error: generateError } = useGeneratePostWithLink();
   const { modifyPost, isModifying, modifyError } = useModifyPost();
   
   useEffect(() => {
@@ -85,6 +88,11 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
       const formData = new FormData();
       formData.append('title', title || 'Untitled');
       formData.append('postContent', postContent || '');
+      
+      // Add external link if provided
+      if (externalLink) {
+        formData.append('externalLink', externalLink);
+      }
       
       // Prepare array of image URLs to pass to the saveDraft function
       const imageUrlsToSave = [];
@@ -313,6 +321,45 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
     }
   };
 
+  // Function to handle content generation
+  const handleGenerateContent = async () => {
+    if (!title) {
+      setErrorMessage('Please provide a title');
+      setTimeout(() => setErrorMessage(''), 5000);
+      return;
+    }
+
+    if (!aiModificationText) {
+      setErrorMessage('Please provide a prompt');
+      setTimeout(() => setErrorMessage(''), 5000);
+      return;
+    }
+
+    updateGeneratingStatus(true);
+    
+    try {
+      // Use unified hook that handles all types of content generation
+      const result = await generatePost(title, aiModificationText, externalLink);
+      
+      if (result) {
+        onUpdatePostContent(result.post);
+        
+        // Set image search results if they exist
+        if (result.imageUrls && Array.isArray(result.imageUrls)) {
+          setApiImageUrls(result.imageUrls);
+        }
+        
+        setIsFirstGeneration(false);
+      }
+    } catch (error) {
+      console.error("Error generating content:", error);
+      setErrorMessage('Failed to generate content: ' + error.message);
+      setTimeout(() => setErrorMessage(''), 5000);
+    } finally {
+      updateGeneratingStatus(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg p-7 w-full border border-gray-100">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Write your post</h2>
@@ -323,6 +370,13 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
           setTitle={setTitle} 
           isGenerating={isGenerating} 
           errorMessage={errorMessage} 
+        />
+        
+        {/* External link input */}
+        <ExternalLinkInput
+          value={externalLink}
+          onChange={setExternalLink}
+          disabled={isGenerating}
         />
         
         {/* AI prompt section component */}
@@ -337,6 +391,7 @@ const SideBigCard = ({ postContent, onUpdatePostContent, updateGeneratingStatus 
           showMaxDurationAlert={showMaxDurationAlert}
           toggleRecording={toggleRecording}
           handleModifyButtonClick={handleModifyButtonClick}
+          handleGenerateContent={handleGenerateContent}
           remainingModifications={remainingModifications}
           showExtraCreditsMessage={showExtraCreditsMessage}
         />

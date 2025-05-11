@@ -22,6 +22,10 @@ const postSchema = new mongoose.Schema({
         type: [String],
         required: false
     },
+    externalLink: {
+        type: String,
+        required: false
+    },
     postStatus: {
         type: String,
         enum: ["draft", "published", "scheduled", "failed"],

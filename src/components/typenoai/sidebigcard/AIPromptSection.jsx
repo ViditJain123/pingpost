@@ -11,6 +11,7 @@ const AIPromptSection = ({
   showMaxDurationAlert, 
   toggleRecording,
   handleModifyButtonClick,
+  handleGenerateContent,
   remainingModifications,
   showExtraCreditsMessage
 }) => {
@@ -80,7 +81,7 @@ const AIPromptSection = ({
       )}
       
       <button 
-        onClick={handleModifyButtonClick}
+        onClick={isFirstGeneration ? handleGenerateContent : handleModifyButtonClick}
         disabled={isGenerating || isRecording || isProcessing}
         className={`w-full p-3 ${
           isGenerating || isRecording || isProcessing

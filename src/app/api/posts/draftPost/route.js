@@ -21,12 +21,13 @@ export async function POST(request) {
         const linkedinProfile = JSON.parse(linkedinProfileCookie);
         const linkedinId = linkedinProfile.linkedinId;
 
-        const postData = await request.formData();
+        const formData = await request.formData();
 
-        const title = postData.get('title');
-        const postContent = postData.get('postContent');
-        const imageUrls = postData.getAll('imageUrls');
-        const files = postData.getAll('images');
+        const title = formData.get('title');
+        const postContent = formData.get('postContent');
+        const externalLink = formData.get('externalLink');
+        const imageUrls = formData.getAll('imageUrls');
+        const files = formData.getAll('images');
 
         if (!title || !postContent) {
             return NextResponse.json(
@@ -91,7 +92,7 @@ export async function POST(request) {
         // Combine uploaded image URLs with provided image URLs
         const allImageUrls = [...uploadedImages, ...imageUrls].filter(Boolean);
 
-        const post = new Post({
+        const postData = {
             linkedinId,
             title,
             postContent,
@@ -99,7 +100,14 @@ export async function POST(request) {
             postStatus: 'draft',
             postSpecificSchedule: false,
             scheduleTime: null,
-        });
+        };
+        
+        // Add external link if provided
+        if (externalLink) {
+            postData.externalLink = externalLink;
+        }
+        
+        const post = new Post(postData);
 
         await post.save();
 

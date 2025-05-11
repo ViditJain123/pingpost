@@ -18,6 +18,8 @@ const useDraftPost = () => {
         });
       }
       
+      // Note: externalLink should be added to formData by the component before calling this function
+      
       const response = await fetch('/api/posts/draftPost', {
         method: 'POST',
         body: formData, // Send FormData directly
